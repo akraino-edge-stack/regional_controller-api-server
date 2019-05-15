@@ -29,6 +29,7 @@
       </resource>
     </resources>
     <plugins>
+      <!--
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
@@ -55,6 +56,7 @@
           </execution>
         </executions>
       </plugin>
+      -->
       <plugin>
         <groupId>kr.motd.maven</groupId>
         <artifactId>sphinx-maven-plugin</artifactId>
