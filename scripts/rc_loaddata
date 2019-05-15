@@ -1,0 +1,166 @@
+#!/usr/bin/python3
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#  rc_loaddata - Load pre-defined data into the Regional Controller.
+#  usage: rc_loaddata [ -h host ] [ -u user ] [ -p passwd ] [ -A | -D | -M ]
+#               [ -s section ] yamls ...
+#     -H host (default localhost)
+#     -u user (default admin)
+#     -p passwd
+#     -s section (only process section, default ALL)
+#     -A      (add new entries in yamls)
+#     -D      (delete entries in yamls)
+#     -M      (match yamls to host)
+#
+
+import sys
+import argparse
+import json
+import yaml     # sudo pip install PyYAML
+import RCClient
+from uuid import UUID
+
+SECTIONS = [ 'hardware', 'regions', 'nodes', 'edgesites', 'blueprints' ]
+
+def singular(s):
+    if s.endswith('s'):
+        return s[0:len(s)-1]
+    return s
+
+def is_uuid(uuid):
+    try:
+        uuid_obj = UUID(uuid, version=4)
+        return True
+    except:
+        return False
+
+def fetch_remote(rc, type):
+    s = rc.list_of_type(singular(type))
+    remote = json.loads(s)
+    return remote[type]
+
+def find_item(array, name):
+    for map in array:
+        if map['name'] == name:
+            return map
+    return None
+
+def safe_array(a):
+    if a == None:
+        a = []
+    return a
+
+def add_objects(rc, type, smap):
+    stype = singular(type)
+    hwarray = None
+    nodearray = None
+    regarray = None
+    for item in smap:
+        content = smap[item]
+        if type == 'edgesites':
+            # map nodes, regions, hardware in content to UUIDs (when section = edgesites|)
+            nodes = content['nodes']
+            for i in range(len(nodes)):
+                node = nodes[i]
+                if not is_uuid(node):
+                    if nodearray == None:
+                        nodearray = fetch_remote(rc, 'nodes')
+                    remoteitem = find_item(nodearray, node)
+                    if remoteitem != None:
+                        nodes[i] = remoteitem['uuid']
+            regs = content['regions']
+            for i in range(len(regs)):
+                reg = regs[i]
+                if not is_uuid(reg):
+                    if regarray == None:
+                        regarray = fetch_remote(rc, 'regions')
+                    remoteitem = find_item(regarray, reg)
+                    if remoteitem != None:
+                        regs[i] = remoteitem['uuid']
+        if type == 'nodes':
+            hw = content['hardware']
+            if not is_uuid(hw):
+                # map a hardware name to UUID
+                if hwarray == None:
+                    hwarray = fetch_remote(rc, 'hardware')
+                remoteitem = find_item(hwarray, hw)
+                if remoteitem != None:
+                    content['hardware'] = remoteitem['uuid']
+        content['name'] = item
+        resp = rc.create_of_type(stype, 'application/json', content)
+        print('Created type=%s name=%s  %s' % (stype, item, resp))
+
+def delete_objects(rc, type, smap):
+    stype = singular(type)
+    r2 = fetch_remote(rc, type)
+    for item in smap:
+        content = smap[item]
+        if 'uuid' in content:
+            uuid = content['uuid']
+            resp = rc.delete_of_type(stype, 'application/json', uuid)
+            print('Deleted type=%s uuid=%s  %s' % (stype, uuid, resp))
+        else:
+            remoteitem = find_item(r2, item)
+            if remoteitem != None:
+                uuid = remoteitem['uuid']
+                resp = rc.delete_of_type(stype, 'application/json', uuid)
+                print('Deleted type=%s uuid=%s  %s' % (stype, uuid, resp))
+
+def match_objects(rc, type, smap):
+	# add the items in smap not in remote
+	# del the items in remote not in smap
+    for item in smap:
+        print('MATCH ' + item)
+
+def main():
+    parser = argparse.ArgumentParser(description='Add/delete objects from a Regional Controller. The objects are retrieved from one or more YAML files.')
+    parser.add_argument('-H', help='the host of the regional controller (default localhost)', dest='host', default='localhost')
+    parser.add_argument('-u', help='the username to use (default admin)', dest='user', default='admin')
+    parser.add_argument('-p', help='the password to use', dest='password')
+    parser.add_argument('-s', help='only process the named section of the YAMLs (default all)', dest='section', action='append', choices=SECTIONS)
+    parser.add_argument('-A', help='add new entries in YAMLs to the RC', action='store_const', dest='op', const='add', default='add')
+    parser.add_argument('-D', help='delete entries in YAMLs from the RC', action='store_const', dest='op', const='delete')
+    parser.add_argument('-M', help='match entries in YAMLs to the RC', action='store_const', dest='op', const='match')
+    parser.add_argument('yaml', help='YAML files containing RC objects to be added/deleted/matched', metavar='YAML', nargs='+')
+    args = parser.parse_args()
+
+    ymap = {}
+    for y in args.yaml:
+        with open(y) as f:
+            map2 = yaml.safe_load(f)
+            ymap = { **ymap, **map2 }
+
+    rc = RCClient.RCClient(server=args.host, login=args.user, password=args.password)
+    if args.op == 'add':
+        for section in SECTIONS:
+            if (args.section == None or section in args.section) and section in ymap:
+                print ('Process section: '+section)
+                add_objects(rc, section, safe_array(ymap[section]))
+    elif args.op == 'delete':
+        for section in reversed(SECTIONS):
+            if (args.section == None or section in args.section) and section in ymap:
+                print ('Process section: '+section)
+                delete_objects(rc, section, safe_array(ymap[section]))
+    else:
+         for section in SECTIONS:
+            if (args.section == None or section in args.section) and section in ymap:
+                print ('Process section: '+section)
+                match_objects(rc, section, safe_array(ymap[section]))
+
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()

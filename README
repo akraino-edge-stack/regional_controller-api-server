@@ -1,0 +1,9 @@
+This project contains source code for the Akraino Regional Controller Feature Project.
+This is the second implementation of a regional controller (the first was for Network Cloud only).
+The Wiki for this FP is at https://wiki.akraino.org/display/AK/Akraino+Regional+Controller
+
+Contents of the subdirectories are:
+docker        - Dockerfiles and other source to create the two Docker containers
+scripts       - Scripts to start/stop the regional controller, and to load data into the RC.
+src           - Java code for the Regional Controller API server
+src/site/docs - Documentation in RST format

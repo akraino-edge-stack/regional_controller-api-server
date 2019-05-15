@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </Console>
+    <File name="applog" fileName="/usr/local/tomcat/logs/app.log">
+      <PatternLayout>
+        <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>
+      </PatternLayout>
+    </File>
+    <File name="apilog" fileName="/usr/local/tomcat/logs/api.log">
+      <PatternLayout>
+        <Pattern>%d %p %c{1.} %m%n</Pattern>
+      </PatternLayout>
+    </File>
+    </Appenders>
+  <Loggers>
+    <Logger name="ApiLogger" level="info">
+      <AppenderRef ref="apilog"/>
+    </Logger>
+    <Root level="info">
+      <AppenderRef ref="applog"/>
+    </Root>
+  </Loggers>
+</Configuration>

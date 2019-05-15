@@ -1,0 +1,58 @@
+dn: ou=people,dc=akraino,dc=demo
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=akraino,dc=demo
+objectClass: organizationalUnit
+ou: groups
+
+dn: uid=38fdc60e-3dc2-11e9-9df9-53c00beebfb1,ou=people,dc=akraino,dc=demo
+objectClass: person
+objectClass: inetOrgPerson
+uid: 38fdc60e-3dc2-11e9-9df9-53c00beebfb1
+cn: Readonly User
+sn: Readonly
+description: Readonly User
+userpassword: abc123
+ou: people
+initials: ro
+
+dn: uid=2d3a342e-6374-11e9-8b05-8333548995aa,ou=people,dc=akraino,dc=demo
+objectClass: person
+objectClass: inetOrgPerson
+uid: 2d3a342e-6374-11e9-8b05-8333548995aa
+cn: Workflow User
+sn: Workflow
+description: Workflow User
+userpassword: abc123
+ou: people
+initials: wf
+
+dn: uid=a16d969e-4081-11e9-ade7-d3a10ca6285d,ou=people,dc=akraino,dc=demo
+objectClass: person
+objectClass: inetOrgPerson
+uid: a16d969e-4081-11e9-ade7-d3a10ca6285d
+cn: Noaccess User
+sn: Noaccess
+description: Noaccess User
+userpassword: abc123
+ou: people
+initials: na
+
+dn: cn=readonly,ou=groups,dc=akraino,dc=demo
+objectClass: groupOfNames
+cn: readonly
+description: read-*
+member: uid=readonly,ou=people,dc=akraino,dc=demo
+
+dn: cn=noaccess,ou=groups,dc=akraino,dc=demo
+objectClass: groupOfNames
+cn: noaccess
+description:
+member: uid=noaccess,ou=people,dc=akraino,dc=demo
+
+dn: cn=workflow,ou=groups,dc=akraino,dc=demo
+objectClass: groupOfNames
+cn: workflow
+description: read-*, create-podevent
+member: uid=workflow,ou=people,dc=akraino,dc=demo
