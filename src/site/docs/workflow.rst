@@ -92,6 +92,9 @@ Workflows written in Python may assume the following is available:
 - the RC will create a ``POD.py`` file in the workspace which will contain all the data
   (written as Python variables) describing the Blueprint, Edgesite, and user data to be used
   for the workflow. (BLUEPRINT, EDGESITE, USER_DATA, POD_UUID, NODES[])
+- the RC will also create a ``INPUT.yaml`` file in the workspace which will contain all the data
+  (in YAML form) that was provided to the RC in the POST or PUT request.  This data should match
+  the input_schema in the Blueprint, with optional extra values not specified in the input_schema.
 
 The version of Python used inside Airflow is 3.6.
 

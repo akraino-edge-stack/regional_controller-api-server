@@ -179,10 +179,11 @@ public class Airflow implements WorkFlow {
 		if (ispython) {
 			wfscript = wfscript.substring(0, wfscript.length()-3);
 		}
+		String poduuid = pod.getUuid();
 
 		// Create the POD.py file
 		StringBuilder sb = new StringBuilder();
-		sb.append("POD = '").append(pod.getUuid()).append("'\n\n");
+		sb.append("POD = '").append(poduuid).append("'\n\n");
 		sb.append("BLUEPRINT = \"\"\"\n").append(new JSONtoYAML(bp.toJSON()).toString()).append("\"\"\"\n\n");
 		sb.append("EDGESITE = \"\"\"\n") .append(new JSONtoYAML(es.toJSON()).toString()).append("\"\"\"\n\n");
 		if (!writeToFile(sb.toString(), Paths.get(wfdir, "POD.py")))
@@ -190,15 +191,21 @@ public class Airflow implements WorkFlow {
 
 		// Create the POD.sh file
 		sb.setLength(0);
-		sb.append("export POD='").append(pod.getUuid()).append("'\n\n");
+		sb.append("export POD='").append(poduuid).append("'\n\n");
 		sb.append("export BLUEPRINT='\n").append(new JSONtoYAML(bp.toJSON()).toString()).append("'\n\n");
 		sb.append("export EDGESITE='\n") .append(new JSONtoYAML(es.toJSON()).toString()).append("'\n\n");
 		if (!writeToFile(sb.toString(), Paths.get(wfdir, "POD.sh")))
 			return false;
 
+		// Create the INPUT.yaml file
+		sb.setLength(0);
+		sb.append(pod.getYaml().toString()).append("\n");
+		if (!writeToFile(sb.toString(), Paths.get(wfdir, "INPUT.yaml")))
+			return false;
+
 		// Create the top level workflow script (Python)
 		String t = getTemplate(ispython);
-		t = t.replace("##UUID##", pod.getUuid());
+		t = t.replace("##UUID##", poduuid);
 		t = t.replace("##PHASE##", phase);
 		t = t.replace("##WFNAME##", wfscript);
 		Path wfpath = Paths.get(dags_directory, wfname + ".py");

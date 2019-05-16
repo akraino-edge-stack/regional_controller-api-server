@@ -33,7 +33,7 @@ import yaml     # sudo pip install PyYAML
 import RCClient
 from uuid import UUID
 
-SECTIONS = [ 'hardware', 'regions', 'nodes', 'edgesites', 'blueprints' ]
+SECTIONS = [ 'hardware', 'regions', 'nodes', 'edgesites', 'blueprints', 'pods' ]
 
 def singular(s):
     if s.endswith('s'):

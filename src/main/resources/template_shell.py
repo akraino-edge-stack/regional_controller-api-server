@@ -20,6 +20,7 @@ and may define further additions to the DAG, if required.
 """
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.bash_operator import BashOperator
 from datetime import datetime
 from datetime import timedelta
 import sys
