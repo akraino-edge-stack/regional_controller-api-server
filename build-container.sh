@@ -36,7 +36,7 @@ else
     VERSION=`xmlstarlet sel -N "x=http://maven.apache.org/POM/4.0.0" -t -v "/x:project/x:version" pom.xml`
     XMLFILE="${NEXUS_URL}/service/local/repositories/snapshots/content/org/akraino/${PROJECT2}/${VERSION}/maven-metadata.xml"
     curl -O "${XMLFILE}"
-    V2=`grep value maven-metadata.xml | sed -e 's;</value>;;' -e 's;.*<value>;;' | uniq`
+    V2=`egrep extension\|value maven-metadata.xml | paste - - | grep war | sed -e 's;</value>;;' -e 's;.*value>;;'`
     WARFILE="${NEXUS_URL}/service/local/repositories/snapshots/content/org/akraino/${PROJECT2}/${VERSION}/${PROJECT2}-${V2}.war"
     curl -O "${WARFILE}"
 fi
