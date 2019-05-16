@@ -54,7 +54,6 @@ ln $(basename ${WARFILE}) docker/api
 )
 
 # Build Airflow container
-export DOCKER_REPO='nexus3.att-akraino.org:5000'
 (
 	CON_NAME='akraino/airflow'
 
