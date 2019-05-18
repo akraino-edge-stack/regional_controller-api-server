@@ -22,7 +22,7 @@ USER root
 RUN \
 	apt-get update -y && \
 	apt-get install -yqq --no-install-recommends \
-	apt-transport-https net-tools ssh python-pip gnupg software-properties-common lsb-release git && \
+	apt-transport-https net-tools ssh python-pip gnupg software-properties-common lsb-release git jq && \
 	curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg > /tmp/dkey; apt-key add /tmp/dkey && \
 	add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") $(lsb_release -cs) stable" && \
 	apt-get update -yqq && \

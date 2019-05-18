@@ -66,7 +66,10 @@ def postamble(ds, **kwargs):
 
 t1 = PythonOperator(task_id='preamble', provide_context=True, python_callable=preamble, dag=dag)
 
-t2 = BashOperator(task_id='maintask', bash_command='/workflow/##PHASE##-##UUID##/##WFNAME##', dag=dag)
+# Note the space at the end of the bash_command value is REQUIRED
+t2 = BashOperator(task_id='maintask',
+	bash_command='chmod +x /workflow/##PHASE##-##UUID##/##WFNAME##; /bin/bash /workflow/##PHASE##-##UUID##/##WFNAME## ',
+	dag=dag)
 
 t3 = PythonOperator(task_id='postamble', provide_context=True, python_callable=postamble, dag=dag)
 
