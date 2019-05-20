@@ -32,20 +32,20 @@ setting and exporting certain environment variables.  For example:
   export DROOT=/opt/arc
   ./start_arc.sh
 
-============  ======================= ===========================================================
-Variable      Default value           Purpose
-============  ======================= ===========================================================
-DROOT         /data                   The root of the directory tree for volumes shared with the containers.
-DOMAIN        akraino.demo            The domain under which all these containers run.
-PREFIX        arc                     The prefix used when naming the Docker containers.
-PW            abc123                  The password used for the databases.
-NETWORK       ${PREFIX}-net           The name of the Docker network that all containers run on.
-CERTDIR       ${DROOT}/nginx/cert     Alternate directory to pass to NGiNX for the SSL certificates.
-API_IMAGE     akraino/arc_api:latest  The Docker image used for the API server.
-AF_IMAGE      akraino/airflow:latest  The Docker image used for the Apache Airflow workflow engine.
-DB_IMAGE      mariadb:10.4            The Docker image used for the database.
-LDAP_IMAGE    osixia/openldap:1.2.3   The Docker image used for the LDAP server.
-============  ======================= ===========================================================
+============  ================================================ ===========================================================
+Variable      Default value                                    Purpose
+============  ================================================ ===========================================================
+DROOT         /data                                            The root of the directory tree for volumes shared with the containers.
+DOMAIN        akraino.demo                                     The domain under which all these containers run.
+PREFIX        arc                                              The prefix used when naming the Docker containers.
+PW            abc123                                           The password used for the databases.
+NETWORK       ${PREFIX}-net                                    The name of the Docker network that all containers run on.
+CERTDIR       ${DROOT}/nginx/cert                              Alternate directory to pass to NGiNX for the SSL certificates.
+API_IMAGE     nexus3.akraino.org:10003/akraino/arc_api:latest  The Docker image used for the API server.
+AF_IMAGE      nexus3.akraino.org:10003/akraino/airflow:latest  The Docker image used for the Apache Airflow workflow engine.
+DB_IMAGE      mariadb:10.4                                     The Docker image used for the database.
+LDAP_IMAGE    osixia/openldap:1.2.3                            The Docker image used for the LDAP server.
+============  ================================================ ===========================================================
 
 NGiNX will only allow HTTPS (port 443) access.
 It comes with some built in SSL certificates, that are self-signed and are for the

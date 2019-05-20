@@ -29,8 +29,8 @@ export CERTDIR=${CERTDIR:-"${DROOT}/nginx/certs"}
 export  NGCONF=${NGCONF:-"nginx.conf"}
 
 # Container versions
-export  API_IMAGE=${API_IMAGE:-"akraino/arc_api:latest"}
-export   AF_IMAGE=${AF_IMAGE:-"akraino/airflow:latest"}
+export  API_IMAGE=${API_IMAGE:-"nexus3.akraino.org:10003/akraino/arc_api:0.0.1-SNAPSHOT"}
+export   AF_IMAGE=${AF_IMAGE:-"nexus3.akraino.org:10003/akraino/airflow:0.0.1-SNAPSHOT"}
 export   DB_IMAGE=${DB_IMAGE:-"mariadb:10.4"}
 export LDAP_IMAGE=${LDAP_IMAGE:-"osixia/openldap:1.2.4"}
 
