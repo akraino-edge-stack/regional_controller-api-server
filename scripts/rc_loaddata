@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 #  rc_loaddata - Load pre-defined data into the Regional Controller.
-#  usage: rc_loaddata [ -h host ] [ -u user ] [ -p passwd ] [ -A | -D | -M ]
+#  usage: rc_loaddata [ -H host ] [ -u user ] [ -p passwd ] [ -A | -D | -M ]
 #               [ -s section ] yamls ...
 #     -H host (default localhost)
 #     -u user (default admin)

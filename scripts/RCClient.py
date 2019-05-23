@@ -98,8 +98,9 @@ class RCClient(object):
             self.login(self._login, self._pswd)
         headers = {'Accept': self._accept, TOKEN_HDR: self._token}
         response = requests.get(self._url+APIPATH+ type, headers=headers, verify=False)
-        self._laststatus = response.status_code
-        self._lastreason = response.reason
+        self._lastresponse = response
+        self._laststatus   = response.status_code
+        self._lastreason   = response.reason
         return response.text
 
     def create_blueprint(self, content, ctype=JSON):
@@ -125,8 +126,9 @@ class RCClient(object):
             self.login(self._login, self._pswd)
         headers = {'Content-type': ctype, 'Accept': self._accept, TOKEN_HDR: self._token}
         response = requests.post(self._url+APIPATH+type, json=content, headers=headers, verify=False)
-        self._laststatus = response.status_code
-        self._lastreason = response.reason
+        self._lastresponse = response
+        self._laststatus   = response.status_code
+        self._lastreason   = response.reason
         return response.text
 
     def delete_blueprint(self, uuid, ctype=JSON):
@@ -152,6 +154,35 @@ class RCClient(object):
             self.login(self._login, self._pswd)
         headers = {'Content-type': ctype, 'Accept': self._accept, TOKEN_HDR: self._token}
         response = requests.delete(self._url+APIPATH+type+'/'+uuid, headers=headers, verify=False)
-        self._laststatus = response.status_code
-        self._lastreason = response.reason
+        self._lastresponse = response
+        self._laststatus   = response.status_code
+        self._lastreason   = response.reason
+        return response.text
+
+    def show_blueprint(self, uuid, ctype=JSON):
+        return self.show_of_type('blueprint', ctype, uuid)
+
+    def show_edgesite(self, uuid, ctype=JSON):
+        return self.show_of_type('edgesite', ctype, uuid)
+
+    def show_hardware(self, uuid, ctype=JSON):
+        return self.show_of_type('hardware', ctype, uuid)
+
+    def show_node(self, uuid, ctype=JSON):
+        return self.show_of_type('node', ctype, uuid)
+
+    def show_pod(self, uuid, ctype=JSON):
+        return self.show_of_type('pod', ctype, uuid)
+
+    def show_region(self, uuid, ctype=JSON):
+        return self.show_of_type('region', ctype, uuid)
+
+    def show_of_type(self, type, ctype, uuid):
+        if self._token == None:
+            self.login(self._login, self._pswd)
+        headers = {'Content-type': ctype, 'Accept': self._accept, TOKEN_HDR: self._token}
+        response = requests.get(self._url+APIPATH+type+'/'+uuid, headers=headers, verify=False)
+        self._lastresponse = response
+        self._laststatus   = response.status_code
+        self._lastreason   = response.reason
         return response.text
