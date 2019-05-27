@@ -55,6 +55,13 @@ An Example Use of the API
 
    example
 
+Command Line Interface to the RC
+--------------------------------
+.. toctree::
+   :maxdepth: 1
+
+   cli
+
 An Example Blueprint
 --------------------
 .. toctree::

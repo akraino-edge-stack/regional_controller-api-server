@@ -120,10 +120,9 @@ def delete_objects(rc, type, smap):
                 print('Deleted type=%s uuid=%s  %s' % (stype, uuid, resp))
 
 def match_objects(rc, type, smap):
-	# add the items in smap not in remote
-	# del the items in remote not in smap
-    for item in smap:
-        print('MATCH ' + item)
+    # add the items in smap not in remote
+    # del the items in remote not in smap
+    print("rc_loaddata: -M option not yet implemented.")
 
 def main():
     parser = argparse.ArgumentParser(description='Add/delete objects from a Regional Controller. The objects are retrieved from one or more YAML files.')
