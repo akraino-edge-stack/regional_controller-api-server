@@ -16,7 +16,7 @@
 .. _cli:
 
 Command Line Interface to the RC
-===============================================
+================================
 Two tools are provided to interface to the RC via the *bash* command line:
 
 - *rc_cli* - which allows you to perform individual API calls
@@ -31,7 +31,8 @@ The options and arguments to the *rc_cli* command may be displayed by invoking i
 
 .. code-block:: bash
 
-  usage: rc_cli [-h] [-H HOST] [-u USER] [-p PASSWORD] [-Y]
+  $ ./rc_cli --help
+  usage: rc_cli [-h] [-H HOST] [-u USER] [-p PASSWORD] [-s SORT] [-F] [-Y]
                 obj op [args [args ...]]
 
   Perform API calls against a Regional Controller.
@@ -46,24 +47,71 @@ The options and arguments to the *rc_cli* command may be displayed by invoking i
     -H HOST      the host of the regional controller (default localhost)
     -u USER      the username to use (default admin)
     -p PASSWORD  the password to use
+    -s SORT      the field to sort list views by
+    -F           forcibly delete a POD (use with "pod delete")
     -Y           display YAML columns in the output of list commands
 
 *rc_cli* will first login to the RC using the host/user/password combination you specify,
 and then will perform the operation (specifed by *op*) on the object (*obj*) listed.
+The user must have the appropriate permissions in the database to perform the requested
+operation.  For example, in order to run the *pod create* command, the user must have a
+user role that includes the *create-pod* or *create-** role attributes.
 
 Objects correspond to the objects that the RC controls; e.g. *blueprint*, *edgesite*,
-*hardware*, *node*, *pod*, and *region*.
+*hardware*, *node*, *pod*, and *region*. Operations are *create*, *delete*, *list*, and
+*show*.
 
-Operations are *create*, *delete*, *list*, and *show*.  The *create* operation typically takes
-as an argument the name of a YAML file containing the object to be created. *delete* takes
-the UUID of the object to be deleted. *list* takes no arguments and just lists all objects of
-the specified type in the RC.  *show* takes a UUID and show details about a specific object in the RC.
+The *create* operation takes as arguments the names of one or more YAML files containing
+the objects to be created.  For successfully created objects, it will print the URL of the
+newly created object, which contains the object's UUID.  The YAML files provided must contain
+only YAML descriptions of the appropriate type specified on the command line. The format of
+these YAML objects can be determined by referencing :ref:`api`.
 
-The *list* operation will not display the YAML column of any objects that have them unless
-the -Y options is provided.
+.. code-block:: bash
 
-RC_LOADDATA - Perform individual API calls
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  $ ./rc_cli -u admin -p admin123 hardware create hardware.yaml
+  https://localhost/api/v1/hardware/36a72db1-f2d9-424b-b94e-b72ca7a50cfe
+
+*delete* takes as arguments a list of UUIDs of the objects to be deleted.
+If the specified objects are deleted, it produces no output.
+
+*list* takes no arguments and just lists all objects of the specified type in the RC. The
+returned list will be sorted based on UUID, unless a different sort column is passed (via
+the *-s sort* option).  The *list* operation will not display the YAML column of any
+object that has a YAML column unless the -Y option is provided.
+
+.. code-block:: bash
+
+  $ ./rc_cli -u admin -p admin123 region list
+  UUID                                  Name       Description                                                Parent
+  ------------------------------------  ---------  ---------------------------------------------------------  ------------------------------------
+  00000000-0000-0000-0000-000000000000  Universal  The Parent of all Regions                                  00000000-0000-0000-0000-000000000000
+  3e2c604a-6ee7-4694-bbdc-9d19b146c6a0  Lab        The main region that all nodes in the lab will all be in.  00000000-0000-0000-0000-000000000000
+  efa82a42-c3b0-49c7-9db3-bbcd85927bbf  OEzone     A special region for all OpenEdge hardware in the lab.     00000000-0000-0000-0000-000000000000
+
+*show* takes as arguments a list of UUIDs of the objects to show the details of.
+
+.. code-block:: bash
+
+  $ ./rc_cli -u admin -p admin123 hardware show c1dfa1ac-53e0-11e9-86c2-c313482f1fdb
+  ---
+  description: Standard Dell configuration for Rover/Unicycle
+  name: Dell PowerEdge R740
+  uuid: c1dfa1ac-53e0-11e9-86c2-c313482f1fdb
+  yaml:
+    cpu: 2x22 Cores @ 2.1GHz Skylake 6152 CPU
+    disk:
+    - 4x480G SSD
+    - 6x2.4T HDD
+    lom: 4x10G Intel 710
+    nic:
+    - 2x1G LOM Intel 5xx
+    - 2x25G PCI3 Intel 710
+    ps: 2
+    ram: 12x32GB
+
+RC_LOADDATA - Batch Load Data into the RC DB
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The options and arguments to the *rc_loaddata* command may be displayed by invoking it with *--help*:
 
