@@ -33,4 +33,5 @@ COPY 001_create_tables.sql 002_required_data.sql standard_users.ldif init/
 COPY akraino.demo.crt akraino.demo.key airflow.cfg nginx*.conf init/
 COPY regional_controller-*.war webapps/ROOT.war
 RUN chown -R tomcat /usr/local/tomcat
+HEALTHCHECK --interval=60s CMD curl -f http://localhost:8080/ || exit 1
 USER tomcat
