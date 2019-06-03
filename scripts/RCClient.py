@@ -143,17 +143,20 @@ class RCClient(object):
     def delete_node(self, uuid, ctype=JSON):
         return self.delete_of_type('node', ctype, uuid)
 
-    def delete_pod(self, uuid, ctype=JSON):
-        return self.delete_of_type('pod', ctype, uuid)
+    def delete_pod(self, uuid, ctype=JSON, force=False):
+        return self.delete_of_type('pod', ctype, uuid, force)
 
     def delete_region(self, uuid, ctype=JSON):
         return self.delete_of_type('region', ctype, uuid)
 
-    def delete_of_type(self, type, ctype, uuid):
+    def delete_of_type(self, type, ctype, uuid, force=False):
         if self._token == None:
             self.login(self._login, self._pswd)
+        myurl = self._url+APIPATH+type+'/'+uuid
+        if force:
+            myurl = myurl + "/force"
         headers = {'Content-type': ctype, 'Accept': self._accept, TOKEN_HDR: self._token}
-        response = requests.delete(self._url+APIPATH+type+'/'+uuid, headers=headers, verify=False)
+        response = requests.delete(myurl, headers=headers, verify=False)
         self._lastresponse = response
         self._laststatus   = response.status_code
         self._lastreason   = response.reason

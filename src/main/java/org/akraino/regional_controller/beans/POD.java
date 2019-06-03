@@ -129,7 +129,7 @@ public class POD extends BaseBean {
 	}
 
 	private final String blueprint;		// UUID of the Blueprint
-	private final String edgesite;		// UUID of the EdgeSite
+	private String edgesite;			// UUID of the EdgeSite
 	private State state;				// the internal state of the POD
 	private String yaml;				// extra JSON describing the POD
 
@@ -176,7 +176,7 @@ public class POD extends BaseBean {
 
 			case ACTIVE:
 			case FAILED:
-				ok = (newstate == State.WORKFLOW);
+				ok = (newstate == State.WORKFLOW) || (newstate == State.DEAD);
 				break;
 
 			case DEAD:
@@ -193,9 +193,14 @@ public class POD extends BaseBean {
 			}
 			if (ok) {
 				this.state = newstate;
+				if (newstate == State.ZOMBIE) {
+					// The Edgesite for this POD is being reused, so point to a non-existant ES
+					this.edgesite = "00000000-0000-0000-0000-000000000000";	// TODO make sure this works
+				}
 				try {
 					DB db = DBFactory.getDB();
 					db.updatePod(this);
+					logger.info("Set State of POD "+this.getUuid()+" to "+state.toString());
 				} catch (SQLException e) {
 					logger.warn("Internal error, while updating POD: "+e);
 				}

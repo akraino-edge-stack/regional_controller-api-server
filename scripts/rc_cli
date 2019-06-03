@@ -81,8 +81,8 @@ class Base(object):
 	def do_delete(self, args):
 		for uuid in args.args:
 			resp = self._rc.delete_of_type(self._type, JSON, uuid)
-			if self._rc._laststatus != 204:
-				print('rc_api: could not delete the %s with UUID %s' % (self._type, uuid))
+			if self._rc._laststatus != 204 and self._rc._laststatus != 200:
+				print('rc_api: could not delete the %s with UUID %s: %s' % (self._type, uuid, resp))
 
 	def do_list(self, cols, titles):
 		response = json.loads(self._rc.list_of_type(self._type))
@@ -142,11 +142,11 @@ class Pod(Base):
 		Base.__init__(self, rc, 'pod', args)
 
 	def delete(self, args):
-		# Check for --force" option
 		for uuid in args.args:
-			resp = self._rc.delete_of_type('pod', JSON, uuid)
-			if self._rc._laststatus != 202 or self._rc._laststatus != 200:
-				print('rc_api: could not delete the POD with UUID '+uuid)
+			# Pass in the "--force" option value
+			resp = self._rc.delete_pod(uuid, ctype=JSON, force=args.force)
+			if self._rc._laststatus != 202 and self._rc._laststatus != 200:
+				print('rc_api: could not delete the POD with UUID %s: %s', (uuid, resp))
 
 	def list(self):
 		self.do_list(('uuid', 'name', 'description', 'state', 'blueprint', 'edgesite'),
@@ -166,7 +166,7 @@ def main():
 	parser.add_argument('-u', help='the username to use (default admin)', dest='user', default='admin')
 	parser.add_argument('-p', help='the password to use', dest='password')
 	parser.add_argument('-s', help='the field to sort list views by', dest='sort', default='uuid')
-	parser.add_argument('-F', help='forcibly delete a POD (use with "pod delete")', action='store_const', dest='force', const='yes', default='no')
+	parser.add_argument('-F', help='forcibly delete a POD (use with "pod delete")', action='store_const', dest='force', const=True, default=False)
 	parser.add_argument('-Y', help='display YAML columns in the output of list commands', action='store_const', dest='doyaml', const='yes', default='no')
 	parser.add_argument('obj', help='The object to manipulate', metavar='obj', choices=OBJS)
 	parser.add_argument('op',  help='The operation to perform on the object', metavar='op', choices=OPS)

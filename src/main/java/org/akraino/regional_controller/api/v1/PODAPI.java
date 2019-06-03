@@ -99,10 +99,17 @@ public class PODAPI extends APIBase {
 				logger.warn(msg);
 				throw new NotFoundException(msg);
 			}
-			if (e.getPOD() != null) {
-				String msg = "The Edgesite "+edgesite+" is already in use by POD "+e.getPOD().getUuid();
-				logger.warn(msg);
-				throw new BadRequestException(msg);
+			POD oldpod = e.getPOD();
+			if (oldpod != null) {
+				if (oldpod.getState() == POD.State.DEAD) {
+					// This Edgesite is being repurposed, so set the old POD to ZOMBIE 
+					oldpod.setState(POD.State.ZOMBIE);
+				}
+				if (oldpod.getState() != POD.State.ZOMBIE) {
+					String msg = "The Edgesite "+edgesite+" is already in use by POD "+e.getPOD().getUuid();
+					logger.warn(msg);
+					throw new BadRequestException(msg);
+				}
 			}
 
 			// 3. Verify that the Blueprint hardware profile allows deployment on this Edgesite
@@ -332,9 +339,31 @@ public class PODAPI extends APIBase {
 	public Response deletePOD(
 		@HeaderParam(SESSION_TOKEN_HDR) String token,
 		@HeaderParam(REAL_IP_HDR)       String realIp,
-		@PathParam("uuid") String uuid)
+		@PathParam("uuid")              String uuid
+	)
 	{
-		String method = "DELETE /api/v1/pod/"+uuid;
+		return deletePODCommon(token, realIp, uuid, false);
+	}
+
+	@DELETE
+	@Path("/{uuid}/force")
+	public Response forceDeletePOD(
+		@HeaderParam(SESSION_TOKEN_HDR) String token,
+		@HeaderParam(REAL_IP_HDR)       String realIp,
+		@PathParam("uuid")              String uuid
+	)
+	{
+		return deletePODCommon(token, realIp, uuid, true);
+	}
+
+	public Response deletePODCommon(
+		String token,
+		String realIp,
+		String uuid,
+		boolean force
+	)
+	{
+		String method = "DELETE /api/v1/pod/"+uuid+(force?"/force":"");
 		User u = checkToken(token, method, realIp);
 		checkRBAC(u, POD_DELETE_RBAC, method, realIp);
 
@@ -342,6 +371,12 @@ public class PODAPI extends APIBase {
 		if (p == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
 			throw new NotFoundException();
+		}
+
+		// If user requests that the delete be forced, delete immediately, without a workflow
+		if (force) {
+			p.setState(POD.State.DEAD);
+			return Response.ok().build();
 		}
 
 		// verify POD is in a state that can be deleted
