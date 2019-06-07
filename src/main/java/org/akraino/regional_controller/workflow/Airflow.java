@@ -31,6 +31,7 @@ import java.util.Properties;
 import org.akraino.regional_controller.beans.Blueprint;
 import org.akraino.regional_controller.beans.Edgesite;
 import org.akraino.regional_controller.beans.POD;
+import org.akraino.regional_controller.beans.PODWorkflow;
 import org.akraino.regional_controller.utils.JSONtoYAML;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -51,7 +52,7 @@ public class Airflow implements WorkFlow {
 	private final String     workspace_directory;
 	private final String     dags_directory;
 	private String           dag_name;
-	private boolean          isrunning;
+	private PODWorkflow      podwflow;
 
 	public Airflow(Properties api_props) {
 		this.props  = api_props;
@@ -60,11 +61,13 @@ public class Airflow implements WorkFlow {
 		this.workspace_directory = props.getProperty("workflow.airflow.root", DEFAULT_ROOT);
 		this.dags_directory      = props.getProperty("workflow.airflow.dags", DEFAULT_DAGS);
 		this.dag_name = null;
-		this.isrunning = false;
+		this.podwflow = null;
 	}
 
 	@Override
-	public boolean initialize(POD pod, String phase) {
+	public boolean initialize(POD pod, PODWorkflow pwf) {
+		String phase = pwf.getName();
+
 		// 1. Start the Workflow in process
 		final String uuid = pod.getUuid();
 		final Blueprint bp = pod.getBlueprintObject();
@@ -72,7 +75,7 @@ public class Airflow implements WorkFlow {
 		pod.createPodEvent("INFO", "Starting workflow: "+phase).writeEvent();
 
 		// 2. Build the workspace for the workflow
-		final String wfname = String.format("%s-%s", phase, uuid);
+		final String wfname = String.format("%s-%d-%s", phase, pwf.getIndex(), uuid);
 		final String wfdir  = String.format("%s/%s", workspace_directory, wfname);
 		if (!new File(wfdir).mkdirs()) {
 			logger.warn("Could not create the workflow directory $DROOT"+wfdir);
@@ -119,12 +122,11 @@ public class Airflow implements WorkFlow {
 		}
 
 		// 5. Create top-level workflow files
-		if (!this.createWorkFlow(wfdir, wfname, pod, bp, pod.getEdgesiteObject(), phase, url)) {
+		if (!this.createWorkFlow(wfdir, wfname, pod, bp, pod.getEdgesiteObject(), pwf, url)) {
 			logger.warn("Could not create the workflow template file.");
 			return false;
 		}
 		pod.createPodEvent("INFO", "Workflow template created.").writeEvent();
-
 		return true;
 	}
 
@@ -136,21 +138,19 @@ public class Airflow implements WorkFlow {
 
 			// Trigger the DAG
 			runAirFlowCommand("trigger_dag");
-
-			isrunning = true;
 		}
 	}
 
 	@Override
 	public void cancel() {
-		if (isrunning) {
+		if (podwflow != null && podwflow.isRunning()) {
 			// TODO - provide workflow URL to use that may be PUT/DELETE-ed
 		}
 	}
 
 	@Override
-	public boolean isFinished() {
-		return false;	//TODO - determine if WF is running
+	public boolean isRunning() {
+		return (podwflow != null) && podwflow.isRunning();
 	}
 
 	private boolean fetchFile(String url, String dir) {
@@ -172,7 +172,7 @@ public class Airflow implements WorkFlow {
 		return false;
 	}
 
-	private boolean createWorkFlow(String wfdir, String wfname, POD pod, Blueprint bp, Edgesite es, String phase, String url) {
+	private boolean createWorkFlow(String wfdir, String wfname, POD pod, Blueprint bp, Edgesite es, PODWorkflow pwf, String url) {
 		int ix = url.lastIndexOf('/');
 		String wfscript = url.substring(ix+1);
 		boolean ispython = url.endsWith(".py");
@@ -199,14 +199,15 @@ public class Airflow implements WorkFlow {
 
 		// Create the INPUT.yaml file
 		sb.setLength(0);
-		sb.append(pod.getYaml().toString()).append("\n");
+		sb.append(pwf.getYaml().toString()).append("\n");
 		if (!writeToFile(sb.toString(), Paths.get(wfdir, "INPUT.yaml")))
 			return false;
 
 		// Create the top level workflow script (Python)
 		String t = getTemplate(ispython);
 		t = t.replace("##UUID##", poduuid);
-		t = t.replace("##PHASE##", phase);
+		t = t.replace("##PHASE##", pwf.getName());
+		t = t.replace("##WFINDEX##", ""+pwf.getIndex());
 		t = t.replace("##WFNAME##", wfscript);
 		Path wfpath = Paths.get(dags_directory, wfname + ".py");
 		if (!writeToFile(t, wfpath))

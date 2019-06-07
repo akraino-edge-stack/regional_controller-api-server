@@ -28,8 +28,8 @@ public class BaseBean {
 	public static final String YAML_TAG        = "yaml";
 
 	private final String uuid;
-	private final String name;
-	private final String description;
+	private String name;
+	private String description;
 
 	protected BaseBean(String uuid, String name, String description) {
 		this.uuid = uuid;
@@ -50,8 +50,16 @@ public class BaseBean {
 		return name;
 	}
 
+	public void setName(String name) {
+		this.name = name;
+	}
+
 	public String getDescription() {
 		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
 	}
 
 	public JSONObject toJSON() {

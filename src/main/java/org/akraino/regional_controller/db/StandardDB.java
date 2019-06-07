@@ -39,6 +39,7 @@ import org.akraino.regional_controller.beans.Hardware;
 import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.POD;
 import org.akraino.regional_controller.beans.PODEvent;
+import org.akraino.regional_controller.beans.PODWorkflow;
 import org.akraino.regional_controller.beans.Region;
 import org.akraino.regional_controller.beans.Role;
 import org.akraino.regional_controller.beans.User;
@@ -152,6 +153,25 @@ public class StandardDB implements DB {
 	}
 
 	@Override
+	public void updateBlueprint(final Blueprint b) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "UPDATE AKRAINO.BLUEPRINT SET description = ? WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, b.getDescription());
+				stmt.setString(2, b.getUuid());
+				stmt.execute();
+			}
+		} catch (SQLException e) {
+			logger.error(e);
+			throw e;
+		} finally {
+			releaseConnection(conn);
+		}
+	}
+
+	@Override
 	public void deleteBlueprint(Blueprint b) throws SQLException {
 		Connection conn = null;
 		try {
@@ -259,6 +279,46 @@ public class StandardDB implements DB {
 	}
 
 	@Override
+	public void updateEdgesite(final Edgesite e) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "UPDATE AKRAINO.EDGESITE SET name = ?, description = ? WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, e.getName());
+				stmt.setString(2, e.getDescription());
+				stmt.setString(3, e.getUuid());
+				stmt.execute();
+			}
+			sql = "DELETE FROM AKRAINO.EDGESITE_ARRAYS WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, e.getUuid());
+				stmt.execute();
+			}
+			sql = "INSERT INTO AKRAINO.EDGESITE_ARRAYS (uuid, fkey, type) VALUES(?, ?, ?)";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				for (String s : e.getNodes()) {
+					stmt.setString(1, e.getUuid());
+					stmt.setString(2, s);
+					stmt.setString(3, "N");
+					stmt.execute();
+				}
+				for (String s : e.getRegions()) {
+					stmt.setString(1, e.getUuid());
+					stmt.setString(2, s);
+					stmt.setString(3, "R");
+					stmt.execute();
+				}
+			}
+		} catch (SQLException ex) {
+			logger.error(ex);
+			throw ex;
+		} finally {
+			releaseConnection(conn);
+		}
+	}
+
+	@Override
 	public void deleteEdgesite(Edgesite e) throws SQLException {
 		Connection conn = null;
 		try {
@@ -334,6 +394,27 @@ public class StandardDB implements DB {
 	}
 
 	@Override
+	public void updateHardware(Hardware h) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "UPDATE AKRAINO.HARDWARE SET name = ?, description = ?, yaml = ? WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, h.getName());
+				stmt.setString(2, h.getDescription());
+				stmt.setString(3, h.getYaml());
+				stmt.setString(4, h.getUuid());
+				stmt.execute();
+			}
+		} catch (SQLException ex) {
+			logger.error(ex);
+			throw ex;
+		} finally {
+			releaseConnection(conn);
+		}
+	}
+
+	@Override
 	public void deleteHardware(Hardware h) throws SQLException {
 		Connection conn = null;
 		try {
@@ -402,6 +483,27 @@ public class StandardDB implements DB {
 			releaseConnection(conn);
 		}
 		return list;
+	}
+
+	@Override
+	public void updateNode(final Node n) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "UPDATE AKRAINO.NODE SET name = ?, description = ?, yaml = ? WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, n.getName());
+				stmt.setString(2, n.getDescription());
+				stmt.setString(3, n.getYaml());
+				stmt.setString(4, n.getUuid());
+				stmt.execute();
+			}
+		} catch (SQLException ex) {
+			logger.error(ex);
+			throw ex;
+		} finally {
+			releaseConnection(conn);
+		}
 	}
 
 	@Override
@@ -572,6 +674,79 @@ public class StandardDB implements DB {
 		return list;
 	}
 
+	// PODS_WORKFLOWS ---------------------------------------------------------------------------------------------------------
+	public void createPodWorkflow(final PODWorkflow pw) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "INSERT INTO AKRAINO.POD_WORKFLOWS (uuid, name, runindex, starttime, yaml) VALUES (?, ?, ?, ?, ?)";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, pw.getUuid());
+				stmt.setString(2, pw.getName());
+				stmt.setInt(3, pw.getIndex());
+				stmt.setTimestamp(4, pw.getStarttime());
+				stmt.setString(5, pw.getYaml());
+				stmt.execute();
+			}
+		} catch (SQLException e) {
+			logger.error(e);
+			throw e;
+		} finally {
+			releaseConnection(conn);
+		}
+	}
+
+	public List<PODWorkflow> getPODWorkflows(String uuid) {
+		List<PODWorkflow> list = new ArrayList<>();
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "SELECT * FROM AKRAINO.POD_WORKFLOWS WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, uuid);
+				try (ResultSet rs = stmt.executeQuery()) {
+					while (rs.next() ) {
+						PODWorkflow pwf = new PODWorkflow(
+							uuid,
+							rs.getString("name"),
+							rs.getInt("runindex"),
+							rs.getTimestamp("starttime"),
+							rs.getString("yaml")
+						);
+						Timestamp etime = rs.getTimestamp("endtime");
+						if (etime != null)
+							pwf.setEndtime(etime);
+						list.add(pwf);
+					}
+				}
+			}
+		} catch (SQLException e) {
+			logger.error(e);
+		} finally {
+			releaseConnection(conn);
+		}
+		return list;
+	}
+
+	@Override
+	public void updatePodWorkflow(final PODWorkflow pw) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "UPDATE AKRAINO.POD_WORKFLOWS SET endtime = ? WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setTimestamp(1, pw.getEndtime());
+				stmt.setString(2, pw.getUuid());
+				stmt.execute();
+			}
+		} catch (SQLException e) {
+			logger.error(e);
+			throw e;
+		} finally {
+			releaseConnection(conn);
+		}
+	}
+
 	// REGIONS ---------------------------------------------------------------------------------------------------------
 	@Override
 	public void createRegion(final Region r) throws SQLException {
@@ -624,6 +799,27 @@ public class StandardDB implements DB {
 			releaseConnection(conn);
 		}
 		return list;
+	}
+
+	@Override
+	public void updateRegion(final Region r) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "UPDATE AKRAINO.REGION SET name = ?, description = ?, parent = ? WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, r.getName());
+				stmt.setString(2, r.getDescription());
+				stmt.setString(3, r.getParent());
+				stmt.setString(4, r.getUuid());
+				stmt.execute();
+			}
+		} catch (SQLException ex) {
+			logger.error(ex);
+			throw ex;
+		} finally {
+			releaseConnection(conn);
+		}
 	}
 
 	@Override

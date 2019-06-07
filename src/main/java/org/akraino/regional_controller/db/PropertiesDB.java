@@ -36,6 +36,7 @@ import org.akraino.regional_controller.beans.Hardware;
 import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.POD;
 import org.akraino.regional_controller.beans.PODEvent;
+import org.akraino.regional_controller.beans.PODWorkflow;
 import org.akraino.regional_controller.beans.Region;
 import org.akraino.regional_controller.beans.Role;
 import org.akraino.regional_controller.beans.User;
@@ -101,6 +102,12 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
+	public void updateBlueprint(Blueprint b) throws SQLException {
+		deleteBlueprint(b);
+		createBlueprint(b);
+	}
+
+	@Override
 	public void deleteBlueprint(Blueprint b) {
 		deleteProperty(BLUEPRINT_PROPERTY, b.getUuid());
 	}
@@ -122,6 +129,12 @@ public class PropertiesDB implements DB {
 			list.add(es);
 		}
 		return list;
+	}
+
+	@Override
+	public void updateEdgesite(Edgesite e) throws SQLException {
+		deleteEdgesite(e);
+		createEdgesite(e);
 	}
 
 	@Override
@@ -148,6 +161,12 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
+	public void updateHardware(Hardware h) throws SQLException {
+		deleteHardware(h);
+		createHardware(h);
+	}
+
+	@Override
 	public void deleteHardware(Hardware h) {
 		deleteProperty("hardware", h.getUuid());
 	}
@@ -168,6 +187,12 @@ public class PropertiesDB implements DB {
 			list.add(n);
 		}
 		return list;
+	}
+
+	@Override
+	public void updateNode(Node n) throws SQLException {
+		deleteNode(n);
+		createNode(n);
 	}
 
 	@Override
@@ -204,12 +229,31 @@ public class PropertiesDB implements DB {
 	}
 
 	// PODS EVENTS ---------------------------------------------------------------------------------------------------------
+	@Override
 	public void createPodEvent(final PODEvent pe) {
 		// do nothing
 	}
 
+	@Override
 	public List<PODEvent> getPODEvents(String uuid) {
 		return new ArrayList<>();
+	}
+
+	// PODS_WORKFLOWS ---------------------------------------------------------------------------------------------------------
+	@Override
+	public void createPodWorkflow(final PODWorkflow pw) throws SQLException {
+		// do nothing - for now
+	}
+
+	@Override
+	public List<PODWorkflow> getPODWorkflows(String uuid) {
+		// do nothing - for now
+		return new ArrayList<>();
+	}
+
+	@Override
+	public void updatePodWorkflow(final PODWorkflow pw) throws SQLException {
+		// do nothing - for now
 	}
 
 	// REGIONS ---------------------------------------------------------------------------------------------------------
@@ -228,6 +272,12 @@ public class PropertiesDB implements DB {
 			list.add(r);
 		}
 		return list;
+	}
+
+	@Override
+	public void updateRegion(Region r) throws SQLException {
+		deleteRegion(r);
+		createRegion(r);
 	}
 
 	@Override

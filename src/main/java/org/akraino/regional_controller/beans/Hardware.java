@@ -33,22 +33,12 @@ import org.akraino.regional_controller.utils.YAMLtoJSON;
 import org.json.JSONObject;
 
 public class Hardware extends BaseBean {
-	public static Collection<Hardware> getHardware() {
-		Map<String, Hardware> map = pullFromDB();
-		return map.values();
-	}
-
-	public static Hardware getHardwareByUUID(final String uuid) {
-		Map<String, Hardware> map = pullFromDB();
-		return map.get(uuid);
-	}
-
 	public static String createHardware(JSONObject json) throws WebApplicationException {
 		String n = json.optString(NAME_TAG);
 		if (n == null || "".equals(n))
 			throw new BadRequestException("Missing name");
-		String d = json.optString("description");
-		String uuid = json.optString("uuid");
+		String d = json.optString(DESCRIPTION_TAG);
+		String uuid = json.optString(UUID_TAG);
 		if (uuid == null || "".equals(uuid)) {
 			// Find a new, unused UUID
 			UUID u;
@@ -67,6 +57,25 @@ public class Hardware extends BaseBean {
 			DB db = DBFactory.getDB();
 			db.createHardware(h2);
 			return uuid;
+		} catch (SQLException e1) {
+			throw new InternalServerErrorException(e1.getMessage());
+		}
+	}
+
+	public static Collection<Hardware> getHardware() {
+		Map<String, Hardware> map = pullFromDB();
+		return map.values();
+	}
+
+	public static Hardware getHardwareByUUID(final String uuid) {
+		Map<String, Hardware> map = pullFromDB();
+		return map.get(uuid);
+	}
+
+	public void updateHardware() throws WebApplicationException {
+		try {
+			DB db = DBFactory.getDB();
+			db.updateHardware(this);
 		} catch (SQLException e1) {
 			throw new InternalServerErrorException(e1.getMessage());
 		}

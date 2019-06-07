@@ -19,6 +19,7 @@ package org.akraino.regional_controller.api.v1;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Set;
 
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
@@ -41,6 +42,7 @@ import org.akraino.regional_controller.beans.Blueprint;
 import org.akraino.regional_controller.beans.Edgesite;
 import org.akraino.regional_controller.beans.POD;
 import org.akraino.regional_controller.beans.PODEvent;
+import org.akraino.regional_controller.beans.PODWorkflow;
 import org.akraino.regional_controller.beans.User;
 import org.akraino.regional_controller.utils.JSONtoYAML;
 import org.json.JSONArray;
@@ -102,7 +104,7 @@ public class PODAPI extends APIBase {
 			POD oldpod = e.getPOD();
 			if (oldpod != null) {
 				if (oldpod.getState() == POD.State.DEAD) {
-					// This Edgesite is being repurposed, so set the old POD to ZOMBIE 
+					// This Edgesite is being repurposed, so set the old POD to ZOMBIE
 					oldpod.setState(POD.State.ZOMBIE);
 				}
 				if (oldpod.getState() != POD.State.ZOMBIE) {
@@ -125,7 +127,7 @@ public class PODAPI extends APIBase {
 			}
 
 			// 4. Verify that all data required from input schema in the Blueprint is in the uploaded file
-			errors = bp.isCompatibleYAML("create", jo.optJSONObject("yaml"));
+			errors = bp.isCompatibleYAML(Blueprint.WF_CREATE, jo.optJSONObject("yaml"));
 			if (! errors.isEmpty()) {
 				String msg = "The uploaded YAML is not compatible with the Blueprint "+blueprint;
 				logger.warn(msg);
@@ -154,9 +156,14 @@ public class PODAPI extends APIBase {
 				// 7. Create the POD in the DB.
 				POD p = POD.createPod(jo);
 				String uuid = p.getUuid();
+				JSONObject y = jo.optJSONObject(POD.YAML_TAG);
+				if (y == null) {
+					y = new JSONObject();
+				}
+				PODWorkflow pwf = PODWorkflow.createPodWorkflow(p, Blueprint.WF_CREATE, y);
 
 				// 8. Run the "create" workflow
-				if (!p.startWorkFlow(Blueprint.WF_CREATE)) {
+				if (!p.startWorkFlow(pwf)) {
 					String msg = "Could not start workflow "+Blueprint.WF_CREATE+" for POD "+p.getUuid();
 					logger.error(msg);
 					throw new BadRequestException(msg);
@@ -260,31 +267,57 @@ public class PODAPI extends APIBase {
 	@PUT
 	@Path("/{uuid}")
 	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(MediaType.APPLICATION_JSON)
-	public String putPODJSON(
+	public Response putPOD(
 		@HeaderParam(SESSION_TOKEN_HDR) final String token,
 		@HeaderParam(REAL_IP_HDR)       final String realIp,
 		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
 	  	@PathParam("uuid")              final String uuid,
 		String content
 	) {
-		JSONObject jo = putPODCommon(token, realIp, uuid, null);
-		return jo.toString();
-	}
+		String method = "PUT /api/v1/pod/"+uuid;
+		User u = checkToken(token, method, realIp);
+		checkRBAC(u, POD_UPDATE_RBAC, method, realIp);
 
-	@PUT
-	@Path("/{uuid}")
-	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(APPLICATION_YAML)
-	public String putPODYAML(
-		@HeaderParam(SESSION_TOKEN_HDR) final String token,
-		@HeaderParam(REAL_IP_HDR)       final String realIp,
-		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
-	  	@PathParam("uuid")              final String uuid,
-	  	String content
-	) {
-		JSONObject jo = putPODCommon(token, realIp, uuid, null);
-		return new JSONtoYAML(jo).toString();
+		POD p = POD.getPodByUUID(uuid);
+		if (p == null) {
+			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
+			throw new NotFoundException();
+		}
+
+		try {
+			// Can only change the description of a POD
+			JSONObject jo = getContent(ctype, content);
+			Set<String> keys = jo.keySet();
+			if (keys.contains(POD.UUID_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the POD's UUID.");
+			}
+			if (keys.contains(POD.NAME_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the POD's name.");
+			}
+			if (keys.contains(POD.STATE_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the POD's state.");
+			}
+			if (keys.contains(POD.BLUEPRINT_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the POD's blueprint.");
+			}
+			if (keys.contains(POD.EDGESITE_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the POD's edgesite.");
+			}
+			if (keys.contains(POD.YAML_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the POD's YAML.");
+			}
+			if (keys.contains(POD.DESCRIPTION_TAG)) {
+				String description = jo.getString(POD.DESCRIPTION_TAG);
+				if (!description.equals(p.getDescription())) {
+					p.setDescription(description);
+					p.updatePod();
+				}
+			}
+			return Response.ok().build();
+		} catch (JSONException e) {
+			logger.warn(e.toString());
+			throw new BadRequestException(e.toString());
+		}
 	}
 
 	@PUT
@@ -297,9 +330,10 @@ public class PODAPI extends APIBase {
 		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
 	  	@PathParam("uuid")              final String uuid,
 		@PathParam("wfname")            final String wfname,
-		String content
+		@QueryParam("dryrun")           final String dryrun,
+		final String content
 	) {
-		JSONObject jo = putPODCommon(token, realIp, uuid, wfname);
+		JSONObject jo = putPODCommon(token, realIp, ctype, uuid, wfname, dryrun, content);
 		return jo.toString();
 	}
 
@@ -313,25 +347,79 @@ public class PODAPI extends APIBase {
 		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
 	  	@PathParam("uuid")              final String uuid,
 		@PathParam("wfname")            final String wfname,
-	  	String content
+		@QueryParam("dryrun")           final String dryrun,
+		final String content
 	) {
-		JSONObject jo = putPODCommon(token, realIp, uuid, wfname);
+		JSONObject jo = putPODCommon(token, realIp, ctype, uuid, wfname, dryrun, content);
 		return new JSONtoYAML(jo).toString();
 	}
 
-	private JSONObject putPODCommon(String token, String realIp, String uuid, String wfname) {
-		String method = "PUT /api/v1/pod/"+uuid;
+	private JSONObject putPODCommon(String token, String realIp, String ctype, String uuid,
+			String wfname, String dryrun, String content)
+	{
+		String method = "PUT /api/v1/pod/"+uuid+"/"+wfname;
 		User u = checkToken(token, method, realIp);
 		checkRBAC(u, POD_UPDATE_RBAC, method, realIp);
 
+		// 1. Make sure this POD exists
 		POD p = POD.getPodByUUID(uuid);
 		if (p == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
 			throw new NotFoundException();
 		}
-		// For now, we ALWAYS disallow this operation
-		api_logger.info("{} user {}, realip {} => 403", method, u.getName(), realIp);
-		throw new ForbiddenException("RBAC does not allow");
+
+		// 2. Verify the user is not trying to run "create" or "delete" workflow
+		if (wfname.equals(Blueprint.WF_CREATE) || wfname.equals(Blueprint.WF_DELETE)) {
+			throw new NotAllowedException("You cannot run the "+wfname+" workflow via this API call.");
+		}
+
+		// 2b. Check that there is a "wfname" workflow in the Blueprint
+		Blueprint bp = p.getBlueprintObject();
+		JSONObject wf = bp.getObjectStanza("workflow/"+wfname);
+		if (wf == null) {
+			// No such workflow, error
+			throw new NotFoundException();
+		}
+
+		// 3. Verify the POD is alive and not running a workflow
+		if (!p.isAlive()) {
+			throw new NotAllowedException("POD is not alive.");
+		}
+		if (p.isWorkflowRunning()) {
+			throw new NotAllowedException("A workflow is currently running on the POD.");
+		}
+
+		// 4. Verify that all data required from input schema in the Blueprint is in the uploaded file
+		JSONObject jo = getContent(ctype, content);
+		List<String> errors = bp.isCompatibleYAML(wfname, jo);
+		if (! errors.isEmpty()) {
+			String msg = String.format("The uploaded YAML is not compatible with the Blueprint %s and workflow %s", p.getBlueprint(), wfname);
+			logger.warn(msg);
+			for (String s : errors) {
+				msg = msg + "\n" + s;
+				logger.warn(s);
+			}
+			throw new BadRequestException(msg);
+		}
+
+		// 5. If a dry run, then we are done!
+		if (dryrun != null && dryrun.length() > 0) {
+			// Verify only -- do not actually run the workflow
+			return new JSONObject();
+		}
+
+		// 6. Write the user data to the DB
+		PODWorkflow pwf = PODWorkflow.createPodWorkflow(p, wfname, jo);
+
+		// 7. Run the "wfname" workflow
+		if (!p.startWorkFlow(pwf)) {
+			String msg = "Could not start workflow "+wfname+" for POD "+p.getUuid();
+			logger.error(msg);
+			throw new BadRequestException(msg);
+		}
+
+		// Success
+		return new JSONObject();
 	}
 
 	@DELETE
@@ -356,12 +444,7 @@ public class PODAPI extends APIBase {
 		return deletePODCommon(token, realIp, uuid, true);
 	}
 
-	public Response deletePODCommon(
-		String token,
-		String realIp,
-		String uuid,
-		boolean force
-	)
+	public Response deletePODCommon(String token, String realIp, String uuid, boolean force)
 	{
 		String method = "DELETE /api/v1/pod/"+uuid+(force?"/force":"");
 		User u = checkToken(token, method, realIp);
@@ -399,7 +482,8 @@ public class PODAPI extends APIBase {
 		}
 
 		// if so, start delete workflow
-		if (!p.startWorkFlow(Blueprint.WF_DELETE)) {
+		PODWorkflow pwf = PODWorkflow.createPodWorkflow(p, Blueprint.WF_DELETE, new JSONObject());
+		if (!p.startWorkFlow(pwf)) {
 			String msg = "Could not start workflow "+Blueprint.WF_DELETE+" for POD "+p.getUuid();
 			logger.error(msg);
 			throw new BadRequestException(msg);

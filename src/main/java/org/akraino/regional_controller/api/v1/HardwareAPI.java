@@ -19,6 +19,7 @@ package org.akraino.regional_controller.api.v1;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
@@ -44,6 +45,7 @@ import org.akraino.regional_controller.db.DB;
 import org.akraino.regional_controller.db.DBFactory;
 import org.akraino.regional_controller.utils.JSONtoYAML;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 @Path(HardwareAPI.HARDWARE_PATH)
@@ -158,46 +160,64 @@ public class HardwareAPI extends APIBase {
 	@PUT
 	@Path("/{uuid}")
 	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(MediaType.APPLICATION_JSON)
-	public String putHardwaresJSON(
+	public Response putHardwares(
 		@HeaderParam(SESSION_TOKEN_HDR) final String token,
 		@HeaderParam(REAL_IP_HDR)       final String realIp,
 		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
 		@PathParam("uuid") String uuid,
 		String content
 	) {
-		JSONObject jo = putHardwaresCommon(token, realIp, uuid);
-		return jo.toString();
-	}
-
-	@PUT
-	@Path("/{uuid}")
-	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(APPLICATION_YAML)
-	public String putHardwaresYAML(
-		@HeaderParam(SESSION_TOKEN_HDR) final String token,
-		@HeaderParam(REAL_IP_HDR)       final String realIp,
-		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
-		@PathParam("uuid") String uuid,
-		String content
-	) {
-		JSONObject jo = putHardwaresCommon(token, realIp, uuid);
-		return new JSONtoYAML(jo).toString();
-	}
-
-	private JSONObject putHardwaresCommon(String token, String realIp, String uuid) {
 		String method = "PUT /api/v1/hardware/"+uuid;
 		User u = checkToken(token, method, realIp);
 		checkRBAC(u, HARDWARE_UPDATE_RBAC, method, realIp);
 
-		Hardware bp = Hardware.getHardwareByUUID(uuid);
-		if (bp == null) {
+		Hardware hw = Hardware.getHardwareByUUID(uuid);
+		if (hw == null) {
 			api_logger.info("{} user {}, realip {} => 404", "PUT /api/v1/hardware/"+uuid, u.getName(), realIp);
 			throw new NotFoundException();
 		}
-		// For now, we ALWAYS disallow this operation
-		api_logger.info("{} user {}, realip {} => 403", "PUT /api/v1/hardware/"+uuid, u.getName(), realIp);
-		throw new ForbiddenException("RBAC does not allow");
+
+		try {
+			// Can only change the name, description & YAML of Hardware
+			JSONObject jo = getContent(ctype, content);
+			Set<String> keys = jo.keySet();
+			if (keys.contains(Hardware.UUID_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the Hardware profile's UUID.");
+			}
+			boolean doupdate = false;
+			if (keys.contains(Hardware.NAME_TAG)) {
+				String name = jo.getString(Hardware.NAME_TAG);
+				if (!name.equals(hw.getName())) {
+					hw.setName(name);
+					doupdate = true;
+				}
+			}
+			if (keys.contains(Hardware.DESCRIPTION_TAG)) {
+				String description = jo.getString(Hardware.DESCRIPTION_TAG);
+				if (!description.equals(hw.getDescription())) {
+					hw.setDescription(description);
+					doupdate = true;
+				}
+			}
+			if (keys.contains(Hardware.YAML_TAG)) {
+				JSONObject yaml = jo.getJSONObject(Hardware.YAML_TAG);
+				// Make sure this profile is not in use
+				for (Node n : Node.getNodes()) {
+					if (n.getHardware().equals(uuid)) {
+						throw new ForbiddenException("Not allowed to modify the YAML for a Hardware profile that is in use.");
+					}
+				}
+				hw.setYaml(yaml.toString());
+				doupdate = true;
+			}
+			if (doupdate) {
+				hw.updateHardware();
+			}
+			return Response.ok().build();
+		} catch (JSONException e) {
+			logger.warn(e.toString());
+			throw new BadRequestException(e.toString());
+		}
 	}
 
 	@DELETE

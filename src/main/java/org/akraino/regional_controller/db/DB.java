@@ -25,6 +25,7 @@ import org.akraino.regional_controller.beans.Hardware;
 import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.POD;
 import org.akraino.regional_controller.beans.PODEvent;
+import org.akraino.regional_controller.beans.PODWorkflow;
 import org.akraino.regional_controller.beans.Region;
 import org.akraino.regional_controller.beans.User;
 import org.akraino.regional_controller.beans.UserSession;
@@ -33,21 +34,25 @@ public interface DB {
 	// BLUEPRINTS
 	public void createBlueprint(final Blueprint b) throws SQLException;
 	public List<Blueprint> getBlueprints();
-	public void deleteBlueprint(Blueprint b) throws SQLException;
+	public void updateBlueprint(final Blueprint b) throws SQLException;
+	public void deleteBlueprint(final Blueprint b) throws SQLException;
 
 	// EDGESITES
 	public void createEdgesite(final Edgesite e) throws SQLException;
 	public List<Edgesite> getEdgesites();
-	public void deleteEdgesite(Edgesite e) throws SQLException;
+	public void updateEdgesite(final Edgesite e) throws SQLException;
+	public void deleteEdgesite(final Edgesite e) throws SQLException;
 
 	// HARDWARE
 	public void createHardware(final Hardware h) throws SQLException;
 	public List<Hardware> getHardware();
-	public void deleteHardware(Hardware h) throws SQLException;
+	public void updateHardware(final Hardware h) throws SQLException;
+	public void deleteHardware(final Hardware h) throws SQLException;
 
 	// NODES
 	public void createNode(final Node n) throws SQLException;
 	public List<Node> getNodes();
+	public void updateNode(final Node n) throws SQLException;
 	public void deleteNode(final Node n) throws SQLException;
 
 	// PODS
@@ -60,9 +65,15 @@ public interface DB {
 	public void createPodEvent(final PODEvent pe) throws SQLException;
 	public List<PODEvent> getPODEvents(String uuid);
 
+	// PODS_WORKFLOWS
+	public void createPodWorkflow(final PODWorkflow pw) throws SQLException;
+	public List<PODWorkflow> getPODWorkflows(String uuid);
+	public void updatePodWorkflow(final PODWorkflow pw) throws SQLException;
+
 	// REGIONS
 	public void createRegion(final Region r) throws SQLException;
 	public List<Region> getRegions();
+	public void updateRegion(final Region r) throws SQLException;
 	public void deleteRegion(final Region r) throws SQLException;
 
 	// SESSIONS

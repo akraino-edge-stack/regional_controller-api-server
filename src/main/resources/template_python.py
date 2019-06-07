@@ -25,10 +25,10 @@ from datetime import timedelta
 import sys
 import requests
 
-DAG_NAME = '##PHASE##-##UUID##'
+DAG_NAME = '##PHASE##-##WFINDEX##-##UUID##'
 
 # Point to the workspace directory
-sys.path.insert(0, '/workflow/##PHASE##-##UUID##')
+sys.path.insert(0, '/workflow/##PHASE##-##WFINDEX##-##UUID##')
 import ##WFNAME##
 
 default_args = {
@@ -43,7 +43,7 @@ default_args = {
 
 dag = DAG(
 	DAG_NAME,
-	description='Create POD ##UUID##',
+	description='Run ##PHASE## workflow on POD ##UUID##',
 	default_args=default_args,
 	schedule_interval='@once'
 )

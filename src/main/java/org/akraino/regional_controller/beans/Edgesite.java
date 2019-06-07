@@ -39,6 +39,83 @@ import org.json.JSONObject;
 
 public class Edgesite extends BaseBean {
 	private static final Logger logger = LogManager.getLogger();
+	public static final String NODES_TAG   = "nodes";
+	public static final String REGIONS_TAG = "regions";
+
+	public static String createEdgesite(JSONObject json) throws WebApplicationException {
+		String n = json.optString(NAME_TAG);
+		if (n == null || "".equals(n)) {
+			logger.warn("Missing name");
+			throw new BadRequestException("Missing name");
+		}
+		String d = json.optString(DESCRIPTION_TAG);
+		if (d == null) {
+			d = "";
+		}
+
+		// Make sure all of the Nodes are valid and not in use
+		JSONArray nodes = json.optJSONArray(NODES_TAG);
+		if (nodes == null || nodes.length() == 0) {
+			logger.warn("No nodes listed in JSON");
+			throw new BadRequestException("No nodes listed in JSON");
+		}
+		Set<String> nset = new TreeSet<>();
+		for (int i = 0; i < nodes.length(); i++) {
+			String nodeid = nodes.getString(i);
+			Node node = Node.getNodeByUUID(nodeid);
+			if (node == null) {
+				logger.warn("Invalid Node UUID="+nodeid);
+				throw new BadRequestException("Invalid Node uuid "+nodeid);
+			}
+			Edgesite es = node.getEdgesite();
+			if (es != null) {
+				logger.warn("Node is already a member of EdgeSite "+es.getUuid());
+				throw new BadRequestException("Node is already a member of EdgeSite "+es.getUuid());
+			}
+			nset.add(nodeid);
+		}
+
+		// Make sure all regions are valid
+		JSONArray regions = json.optJSONArray(REGIONS_TAG);
+		if (regions == null || regions.length() == 0) {
+			logger.warn("Missing regions");
+			throw new BadRequestException("Missing regions");
+		}
+		Set<String> rset = new TreeSet<>();
+		for (int i = 0; i < regions.length(); i++) {
+			String regionid = regions.getString(i);
+			Region reg = Region.getRegionByUUID(regionid);
+			if (reg == null) {
+				logger.warn("Invalid Region uuid "+regionid);
+				throw new BadRequestException("Invalid Region uuid "+regionid);
+			}
+			rset.add(regionid);
+		}
+
+		String uuid = json.optString(UUID_TAG);
+		if (uuid == null || "".equals(uuid)) {
+			UUID u;
+			do {
+				u = UUID.randomUUID();
+			} while (getEdgesiteByUUID(u.toString()) != null);
+			uuid = u.toString();
+		} else {
+			// Use the UUID provided
+			if (getEdgesiteByUUID(uuid) != null) {
+				throw new BadRequestException("UUID "+uuid+" is already in use.");
+			}
+		}
+		Edgesite e = new Edgesite(uuid, n, d);
+		e.setNodes(nset);
+		e.setRegions(rset);
+		try {
+			DB db = DBFactory.getDB();
+			db.createEdgesite(e);
+			return uuid;
+		} catch (SQLException e1) {
+			throw new InternalServerErrorException(e1.getMessage());
+		}
+	}
 
 	public static Collection<Edgesite> getEdgesites() {
 		Map<String, Edgesite> map = pullFromDB();
@@ -65,76 +142,10 @@ public class Edgesite extends BaseBean {
 		return map.get(uuid);
 	}
 
-	public static String createEdgesite(JSONObject json) throws WebApplicationException {
-		String n = json.getString(NAME_TAG);
-		if (n == null || "".equals(n)) {
-			logger.warn("Missing name");
-			throw new BadRequestException("Missing name");
-		}
-		String d = json.optString(DESCRIPTION_TAG);
-		if (d == null) {
-			d = "";
-		}
-
-		// Make sure all of the Nodes are valid and not in use
-		JSONArray nodes = json.getJSONArray("nodes");
-		if (nodes == null || nodes.length() == 0) {
-			logger.warn("No nodes listed in JSON");
-			throw new BadRequestException("No nodes listed in JSON");
-		}
-		Set<String> nset = new TreeSet<>();
-		for (int i = 0; i < nodes.length(); i++) {
-			String nodeid = nodes.getString(i);
-			Node node = Node.getNodeByUUID(nodeid);
-			if (node == null) {
-				logger.warn("Invalid Node UUID="+nodeid);
-				throw new BadRequestException("Invalid Node uuid "+nodeid);
-			}
-			Edgesite es = node.getEdgesite();
-			if (es != null) {
-				logger.warn("Node is already a member of EdgeSite "+es.getUuid());
-				throw new BadRequestException("Node is already a member of EdgeSite "+es.getUuid());
-			}
-			nset.add(nodeid);
-		}
-
-		// Make sure all regions are valid
-		JSONArray regions = json.getJSONArray("regions");
-		if (regions == null || regions.length() == 0) {
-			logger.warn("Missing regions");
-			throw new BadRequestException("Missing regions");
-		}
-		Set<String> rset = new TreeSet<>();
-		for (int i = 0; i < regions.length(); i++) {
-			String regionid = regions.getString(i);
-			Region reg = Region.getRegionByUUID(regionid);
-			if (reg == null) {
-				logger.warn("Invalid Region uuid "+regionid);
-				throw new BadRequestException("Invalid Region uuid "+regionid);
-			}
-			rset.add(regionid);
-		}
-
-		String uuid = json.optString("uuid");
-		if (uuid == null || "".equals(uuid)) {
-			UUID u;
-			do {
-				u = UUID.randomUUID();
-			} while (getEdgesiteByUUID(u.toString()) != null);
-			uuid = u.toString();
-		} else {
-			// Use the UUID provided
-			if (getEdgesiteByUUID(uuid) != null) {
-				throw new BadRequestException("UUID "+uuid+" is already in use.");
-			}
-		}
-		Edgesite e = new Edgesite(uuid, n, d);
-		e.setNodes(nset);
-		e.setRegions(rset);
+	public void updateEdgesite() throws WebApplicationException {
 		try {
 			DB db = DBFactory.getDB();
-			db.createEdgesite(e);
-			return uuid;
+			db.updateEdgesite(this);
 		} catch (SQLException e1) {
 			throw new InternalServerErrorException(e1.getMessage());
 		}
@@ -206,12 +217,12 @@ public class Edgesite extends BaseBean {
 		for (String s : regions) {
 			rarray.put(s);
 		}
-		jo.put("regions",  rarray);
+		jo.put(REGIONS_TAG,  rarray);
 		JSONArray narray = new JSONArray();
 		for (String s : nodes) {
 			narray.put(s);
 		}
-		jo.put("nodes", narray);
+		jo.put(NODES_TAG, narray);
 		return jo;
 	}
 }

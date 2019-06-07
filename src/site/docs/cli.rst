@@ -52,7 +52,7 @@ The options and arguments to the *rc_cli* command may be displayed by invoking i
     -Y           display YAML columns in the output of list commands
 
 *rc_cli* will first login to the RC using the host/user/password combination you specify,
-and then will perform the operation (specifed by *op*) on the object (*obj*) listed.
+and then will perform the operation (specified by *op*) on the object (*obj*) listed.
 The user must have the appropriate permissions in the database to perform the requested
 operation.  For example, in order to run the *pod create* command, the user must have a
 user role that includes the *create-pod* or *create-** role attributes.
