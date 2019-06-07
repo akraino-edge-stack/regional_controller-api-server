@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.ws.rs.BadRequestException;
+import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.WebApplicationException;
 
 import org.akraino.regional_controller.db.DB;
 import org.akraino.regional_controller.db.DBFactory;
@@ -34,29 +36,20 @@ import org.json.JSONObject;
 
 public class Region extends BaseBean {
 	public static final String UNIVERSAL_REGION = "00000000-0000-0000-0000-000000000000";
-
-	public static Collection<Region> getRegions() {
-		Map<String, Region> map = pullFromDB();
-		return map.values();
-	}
-
-	public static Region getRegionByUUID(final String uuid) {
-		Map<String, Region> map = pullFromDB();
-		return map.get(uuid);
-	}
+	public static final String PARENT_TAG = "parent";
 
 	public static String createRegion(JSONObject json) {
 		try {
 			String n = json.getString(NAME_TAG);
 			if (n == null || "".equals(n))
 				return null;
-			String d = json.optString("description");
+			String d = json.optString(DESCRIPTION_TAG);
 			if (d == null)
 				d = "";
-			String p = json.optString("parent");
+			String p = json.optString(PARENT_TAG);
 			if (p == null || "".equals(p))
 				p = UNIVERSAL_REGION;
-			String uuid = json.optString("uuid");
+			String uuid = json.optString(UUID_TAG);
 			if (uuid == null || "".equals(uuid)) {
 				// Find a new, unused UUID
 				UUID u;
@@ -78,6 +71,25 @@ public class Region extends BaseBean {
 			return null;
 		} catch (SQLException e1) {
 			return null;
+		}
+	}
+
+	public static Collection<Region> getRegions() {
+		Map<String, Region> map = pullFromDB();
+		return map.values();
+	}
+
+	public static Region getRegionByUUID(final String uuid) {
+		Map<String, Region> map = pullFromDB();
+		return map.get(uuid);
+	}
+
+	public void updateRegion() throws WebApplicationException {
+		try {
+			DB db = DBFactory.getDB();
+			db.updateRegion(this);
+		} catch (SQLException e1) {
+			throw new InternalServerErrorException(e1.getMessage());
 		}
 	}
 

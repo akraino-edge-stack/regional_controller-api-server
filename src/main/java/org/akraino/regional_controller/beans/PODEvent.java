@@ -32,6 +32,8 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 
 public class PODEvent {
+	public static final String LEVEL_STATUS = "STATUS";
+
 	public static PODEvent createPodEvent(JSONObject json) throws WebApplicationException {
 		String u = json.optString("uuid");
 		if (u == null || "".equals(u))
@@ -104,7 +106,7 @@ public class PODEvent {
 			db.createPodEvent(this);
 
 			// If the PodEvent has a level of STATUS, this will change state of the POD
-			if (level.equals("STATUS")) {
+			if (level.equals(LEVEL_STATUS)) {
 				String s = message;
 				int ix = s.indexOf(':');
 				if (ix >= 0) {

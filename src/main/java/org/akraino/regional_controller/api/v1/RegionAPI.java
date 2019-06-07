@@ -20,6 +20,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
@@ -40,12 +41,14 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.akraino.regional_controller.beans.Edgesite;
+import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.Region;
 import org.akraino.regional_controller.beans.User;
 import org.akraino.regional_controller.db.DB;
 import org.akraino.regional_controller.db.DBFactory;
 import org.akraino.regional_controller.utils.JSONtoYAML;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -178,46 +181,70 @@ public class RegionAPI extends APIBase {
 	@PUT
 	@Path("/{uuid}")
 	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(MediaType.APPLICATION_JSON)
-	public String putRegionJSON(
+	public Response putRegion(
 		@HeaderParam(SESSION_TOKEN_HDR) final String token,
 		@HeaderParam(REAL_IP_HDR)       final String realIp,
 		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
-		@PathParam("uuid") String uuid,
+		@PathParam("uuid")              final String uuid,
 		String content
 	) {
-		JSONObject jo = putRegionCommon(token, realIp, uuid);
-		return jo.toString();
-	}
-
-	@PUT
-	@Path("/{uuid}")
-	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(APPLICATION_YAML)
-	public String putRegionYAML(
-		@HeaderParam(SESSION_TOKEN_HDR) final String token,
-		@HeaderParam(REAL_IP_HDR)       final String realIp,
-		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
-	  	@PathParam("uuid") String uuid,
-	  	String content
-	) {
-		JSONObject jo = putRegionCommon(token, realIp, uuid);
-		return new JSONtoYAML(jo).toString();
-	}
-
-	private JSONObject putRegionCommon(String token, String realIp, String uuid) {
 		String method = "PUT /api/v1/region/"+uuid;
 		User u = checkToken(token, method, realIp);
 		checkRBAC(u, REGION_UPDATE_RBAC, method, realIp);
 
+		if (uuid.equals(Region.UNIVERSAL_REGION)) {
+			throw new ForbiddenException("Not allowed to modify the Universal region.");
+		}
 		Region r = Region.getRegionByUUID(uuid);
 		if (r == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
 			throw new NotFoundException();
 		}
-		// For now, we ALWAYS disallow this operation
-		api_logger.info("{} user {}, realip {} => 403", method, u.getName(), realIp);
-		throw new ForbiddenException("RBAC does not allow");
+
+		try {
+			// Can only change the name, description & YAML of the Node
+			JSONObject jo = getContent(ctype, content);
+			Set<String> keys = jo.keySet();
+			if (keys.contains(Node.UUID_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the Region's UUID.");
+			}
+			boolean doupdate = false;
+			if (keys.contains(Region.NAME_TAG)) {
+				String name = jo.getString(Region.NAME_TAG);
+				if (!name.equals(r.getName())) {
+					r.setName(name);
+					doupdate = true;
+				}
+			}
+			if (keys.contains(Region.DESCRIPTION_TAG)) {
+				String description = jo.getString(Region.DESCRIPTION_TAG);
+				if (!description.equals(r.getDescription())) {
+					r.setDescription(description);
+					doupdate = true;
+				}
+			}
+			if (keys.contains(Region.PARENT_TAG)) {
+				String parent = jo.getString(Region.PARENT_TAG);
+				if (!parent.equals(r.getParent())) {
+					// Is this a valid parent?
+					if (parent.equals(uuid)) {
+						throw new ForbiddenException("Your parent cannot be yourself!");
+					}
+					if (Region.getRegionByUUID(parent) == null) {
+						throw new ForbiddenException("No regions exists with UUID "+parent);
+					}
+					r.setParent(parent);
+					doupdate = true;
+				}
+			}
+			if (doupdate) {
+				r.updateRegion();
+			}
+			return Response.ok().build();
+		} catch (JSONException e) {
+			logger.warn(e.toString());
+			throw new BadRequestException(e.toString());
+		}
 	}
 
 	@DELETE

@@ -17,6 +17,7 @@
 package org.akraino.regional_controller.beans;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +44,10 @@ import org.json.JSONObject;
  * may transition through.
  */
 public class POD extends BaseBean {
+	public static final String STATE_TAG     = "state";
+	public static final String BLUEPRINT_TAG = "blueprint";
+	public static final String EDGESITE_TAG  = "edgesite";
+
 	public static Collection<POD> getPods() {
 		Map<String, POD> map = pullFromDB();
 		return map.values();
@@ -58,19 +63,19 @@ public class POD extends BaseBean {
 		if (n == null || "".equals(n))
 			throw new BadRequestException("Missing name");
 
-		String blueprint = json.optString("blueprint");
+		String blueprint = json.optString(BLUEPRINT_TAG);
 		if (blueprint == null || "".equals(blueprint))
 			throw new BadRequestException("Missing blueprint UUID");
 		if (Blueprint.getBlueprintByUUID(blueprint) == null)
 			throw new BadRequestException("There is no blueprint with UUID="+blueprint);
 
-		String edgesite = json.optString("edgesite");
+		String edgesite = json.optString(EDGESITE_TAG);
 		if (edgesite == null || "".equals(edgesite))
 			throw new BadRequestException("Missing edgesite UUID");
 		if (Edgesite.getEdgesiteByUUID(edgesite) == null)
 			throw new BadRequestException("There is no edgesite with UUID="+edgesite);
 
-		String desc = json.optString("description");
+		String desc = json.optString(DESCRIPTION_TAG);
 		desc = (desc == null) ? "" : desc;
 		JSONObject y = json.optJSONObject(YAML_TAG);
 		if (y == null) {
@@ -87,6 +92,15 @@ public class POD extends BaseBean {
 			PODEvent pe = p.createPodEvent("INFO", "Pod created.");
 			pe.writeEvent();
 			return p;
+		} catch (SQLException e1) {
+			throw new InternalServerErrorException(e1.getMessage());
+		}
+	}
+
+	public void updatePod() throws WebApplicationException {
+		try {
+			DB db = DBFactory.getDB();
+			db.updatePod(this);
 		} catch (SQLException e1) {
 			throw new InternalServerErrorException(e1.getMessage());
 		}
@@ -192,6 +206,21 @@ public class POD extends BaseBean {
 				return;
 			}
 			if (ok) {
+				if (this.state == State.WORKFLOW) {
+					// Mark end time of pod_workflow - there should be only one that is running for this UUID
+					DB db = DBFactory.getDB();
+					Timestamp ts = new Timestamp(System.currentTimeMillis());
+					for (PODWorkflow pw : db.getPODWorkflows(getUuid())) {
+						if (pw.getEndtime() == null) {
+							pw.setEndtime(ts);
+							try {
+								db.updatePodWorkflow(pw);
+							} catch (SQLException e) {
+								logger.warn("Internal error, while updating PODWorkflow: "+e);
+							}
+						}
+					}
+				}
 				this.state = newstate;
 				if (newstate == State.ZOMBIE) {
 					// The Edgesite for this POD is being reused, so point to a non-existant ES
@@ -243,10 +272,10 @@ public class POD extends BaseBean {
 		return db.getPODEvents(this.getUuid());
 	}
 
-	public synchronized boolean startWorkFlow(String phase) {
+	public synchronized boolean startWorkFlow(PODWorkflow pwf) {
 		if (isAlive() && ! isWorkflowRunning()) {
 			WorkFlow wf = WorkFlowFactory.getWorkFlow();
-			if (wf.initialize(this, phase)) {
+			if (wf.initialize(this, pwf)) {
 				wf.start();
 				setState(State.WORKFLOW);
 				return true;
@@ -258,11 +287,11 @@ public class POD extends BaseBean {
 	@Override
 	public JSONObject toJSON() {
 		JSONObject jo = super.toJSON();
-		jo.put("blueprint", blueprint);
-		jo.put("edgesite", edgesite);
-		jo.put("state", state.toString());
+		jo.put(BLUEPRINT_TAG, blueprint);
+		jo.put(EDGESITE_TAG, edgesite);
+		jo.put(STATE_TAG, state.toString());
 		if (yaml != null && !"".equals(yaml)) {
-			jo.put("yaml", new YAMLtoJSON(yaml).toJSON());
+			jo.put(YAML_TAG, new YAMLtoJSON(yaml).toJSON());
 		}
 		Blueprint bp = getBlueprintObject();
 		jo.put("workflows", new JSONArray(bp.getWorkFlowNames()));

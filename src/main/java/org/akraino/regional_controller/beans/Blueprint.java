@@ -47,6 +47,7 @@ public class Blueprint extends BaseBean {
 	public static final String WF_CREATE = "create";
 	public static final String WF_UPDATE = "update";
 	public static final String WF_DELETE = "delete";
+	public static final String WF_REGEX  = "^[a-zA-Z0-9_]{1,36}$";	// WF names must match this RE
 
 	private static final Set<String> schema_set = new TreeSet<>();
 	static {
@@ -80,10 +81,11 @@ public class Blueprint extends BaseBean {
 		}
 		JSONObject y = json.optJSONObject(YAML_TAG);
 		if (y == null) {
-			y = new JSONObject();
+			logger.warn("Missing YAML; are you sure about this Blueprint?");
+			throw new BadRequestException("Missing YAML; are you sure about this Blueprint?");
 		}
 
-		String uuid = json.optString("uuid");
+		String uuid = json.optString(UUID_TAG);
 		if (uuid == null || "".equals(uuid)) {
 			// Find a new, unused UUID
 			UUID u;
@@ -98,6 +100,15 @@ public class Blueprint extends BaseBean {
 			}
 		}
 		Blueprint b = new Blueprint(uuid, n, d, v, (new JSONtoYAML(y)).toString());
+
+		// Make sure all the workflow names are valid
+		for (String nm : b.getWorkFlowNames()) {
+			if (!nm.matches(WF_REGEX)) {
+				String m = "The workflow name '"+nm+"' is invalid.";
+				logger.warn(m);
+				throw new BadRequestException(m);
+			}
+		}
 		try {
 			DB db = DBFactory.getDB();
 			db.createBlueprint(b);
@@ -115,6 +126,15 @@ public class Blueprint extends BaseBean {
 	public static Blueprint getBlueprintByUUID(final String uuid) {
 		Map<String, Blueprint> map = pullFromDB();
 		return map.get(uuid);
+	}
+
+	public void updateBlueprint() throws WebApplicationException {
+		try {
+			DB db = DBFactory.getDB();
+			db.updateBlueprint(this);
+		} catch (SQLException e1) {
+			throw new InternalServerErrorException(e1.getMessage());
+		}
 	}
 
 	private static Map<String, Blueprint> pullFromDB() {

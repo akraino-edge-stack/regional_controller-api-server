@@ -235,8 +235,10 @@ PUT /api/v1/hardware/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Update the Hardware Profile identified by ``uuid``.
-The user is allowed to modify the description or yaml fields of the Hardware Profile.
-The *yaml* field may not be modified if the Hardware Profile is in use.
+The user is allowed to modify the name, description and yaml fields of the Hardware Profile.
+The *yaml* field may not be modified if the Hardware Profile is in use by a Node.
+The content provided to the PUT operation, in either YAML or JSON form, should consist
+of just those fields to be modified.
 
 ===========  ======================================================================
 Return Code  Reason
@@ -329,8 +331,10 @@ PUT /api/v1/node/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Update the Node identified by ``uuid``.
-The user is allowed to modify the description, hardware or yaml fields of the Node.
-The *hardware* or *yaml* field may not be modified if the Node is in use.
+The user is allowed to modify the name, description, and yaml fields of the Node.
+The *yaml* field may not be modified if the Node is in use by an Edgesite.
+The content provided to the PUT operation, in either YAML or JSON form, should consist
+of just those fields to be modified.
 
 ===========  ======================================================================
 Return Code  Reason
@@ -453,7 +457,12 @@ PUT /api/v1/region/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Update the Region identified by ``uuid``.
-The user is allowed to modify the description or parent fields of the Region.
+The user is allowed to modify the name, description and parent fields of the Region.
+The user is not allowed to change any fields of the ``universal region`` (with UUID
+00000000-0000-0000-0000-000000000000).  If the parent region is changed, it must refer to
+another valid region's UUID, and cannot be self-referential.
+The content provided to the PUT operation, in either YAML or JSON form, should consist
+of just those fields to be modified.
 
 ===========  ======================================================================
 Return Code  Reason
@@ -549,9 +558,11 @@ PUT /api/v1/edgesite/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Update the Edge Site identified by ``uuid``.
-The user is allowed to modify the description, region, or list of nodes in the
-Edge Site.  If the Edge Site is currently being used in a POD, then the list of
+The user is allowed to modify the name, description, list of regions, or list of nodes in
+the Edge Site.  If the Edge Site is currently being used by a POD, then the list of
 nodes may only be expanded, and nodes currently in use may not be removed.
+The content provided to the PUT operation, in either YAML or JSON form, should consist
+of just those fields to be modified.
 
 ===========  ======================================================================
 Return Code  Reason
@@ -686,8 +697,8 @@ PUT /api/v1/blueprint/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Update the Blueprint identified by ``uuid``.
-As Blueprints are *supposed* to be mostly static, this operation will always be
-disallowed.  However, it is provided because it may be allowed in the future.
+As Blueprints are *supposed* to be mostly static, you may only change the description of
+a Blueprint.
 
 ===========  ======================================================================
 Return Code  Reason
@@ -852,7 +863,7 @@ Example YAML output from the API:
   name: Aknode44 Rover
   blueprint: 827cfe84-2e28-11e9-bb34-0017f20dbff8
   edgesite: 2d35351a-3dcb-11e9-9535-e36fdca4d937
-  status: DEPLOYING
+  state: WORKFLOW
   events:
   - { time: "Apr 02, 2019 10:57:56 AM", level: info, message: POD created. }
   - { time: "Apr 02, 2019 10:57:58 AM", level: info, message: Workflow fetched. }
@@ -871,13 +882,29 @@ Return Code  Reason
 PUT /api/v1/pod/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. warning::
+Update the POD identified by ``uuid``. You may only change the description of a POD
+using this method; all other fields are considered "read-only."  In addition, this method
+does not run a workflow.
 
-  This API is incomplete.
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+400          The UUID provided is not a valid UUID.
+401          Invalid session or session token.
+403          User does not have RBAC rights to modify the POD.
+404          The UUID provided does not refer to a POD.
+===========  ======================================================================
 
-Update the POD identified by ``uuid``.
-There are MANY possibilities here.
-As such, this will be fleshed out later.
+PUT /api/v1/pod/``{uuid}``/``{workflow}``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Update the POD identified by ``uuid`` by running a named workflow.  The name of the workflow
+to run is specified in the URL (``workflow``) and must match a name listed under the
+``workflow`` stanza in the POD's Blueprint.
+
+As with the POST operation, you are allowed to pass a ``dryrun`` query parameter, which
+indicates that you want to test whether the PUT operation will work without actually
+starting the associated workflow.
 
 ===========  ======================================================================
 Return Code  Reason
@@ -892,9 +919,30 @@ DELETE /api/v1/pod/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Delete the POD identified by ``uuid``.
-This initiates a removal of the Blueprint from the Edge Site that this POD is using.
+This initiates a removal of the Blueprint from the Edge Site that this POD is using,
+by running a workflo named ``delete`` (if one exists) form the PODs Blueprint.
 The operation happens asynchronously. The progress of the deletion can be monitored
-by issuing GETs against the POD URL, until the POD URL ceases to exist.
+by issuing GETs against the POD URL, and looking at the ``state`` field.  When the
+delete workflow finishes, the value of the state field will change from WORKFLOW to DEAD.
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+202          Operation started.
+400          The UUID provided is not a valid UUID.
+401          Invalid session or session token.
+403          User does not have RBAC rights to delete the content.
+404          The UUID provided does not refer to a Blueprint.
+409          The object is in use and cannot be deleted.
+===========  ======================================================================
+
+DELETE /api/v1/pod/``{uuid}``/force
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Delete the POD identified by ``uuid`` immediately.
+This moves the POD identified by ``uuid`` immediately into the DEAD state, without running
+any workflow.  This is used when you want to forcibly remove a POD from the system, and
+should be used with care.
 
 ===========  ======================================================================
 Return Code  Reason

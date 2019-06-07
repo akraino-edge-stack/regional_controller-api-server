@@ -45,7 +45,7 @@ public class PODEventAPI extends APIBase {
 	public static final String PODEVENT_PATH = "podevent";
 
 	protected static final String[] PODEVENT_CREATE_RBAC = { "create-*", "create-podevent" };
-	protected static final String[] PODEVENT_READ_RBAC   = { "read-*", "read-podevent" };
+	protected static final String[] PODEVENT_READ_RBAC   = { "read-*",   "read-podevent" };
 
 	@POST
 	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})

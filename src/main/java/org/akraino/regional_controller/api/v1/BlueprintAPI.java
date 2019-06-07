@@ -20,6 +20,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
@@ -45,6 +46,7 @@ import org.akraino.regional_controller.db.DB;
 import org.akraino.regional_controller.db.DBFactory;
 import org.akraino.regional_controller.utils.JSONtoYAML;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -161,32 +163,13 @@ public class BlueprintAPI extends APIBase {
 	@PUT
 	@Path("/{uuid}")
 	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(MediaType.APPLICATION_JSON)
-	public String putBlueprintsJSON(
+	public Response putBlueprints(
 		@HeaderParam(SESSION_TOKEN_HDR) String token,
 		@HeaderParam(REAL_IP_HDR) String realIp,
+		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
 		@PathParam("uuid") String uuid,
 		String content
 	) {
-		JSONObject jo = putBlueprintsCommon(token, realIp, uuid);
-		return jo.toString();
-	}
-
-	@PUT
-	@Path("/{uuid}")
-	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(APPLICATION_YAML)
-	public String putBlueprintsYAML(
-		@HeaderParam(SESSION_TOKEN_HDR) String token,
-		@HeaderParam(REAL_IP_HDR) String realIp,
-		@PathParam("uuid") String uuid,
-		String content
-	) {
-		JSONObject jo = putBlueprintsCommon(token, realIp, uuid);
-		return new JSONtoYAML(jo).toString();
-	}
-
-	private JSONObject putBlueprintsCommon(String token, String realIp, String uuid) {
 		String method = "PUT /api/v1/blueprint/"+uuid;
 		User u = checkToken(token, method, realIp);
 		checkRBAC(u, BLUEPRINT_UPDATE_RBAC, method, realIp);
@@ -196,9 +179,35 @@ public class BlueprintAPI extends APIBase {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
 			throw new NotFoundException();
 		}
-		// For now, we ALWAYS disallow this operation
-		api_logger.info("{} user {}, realip {} => 403", method, u.getName(), realIp);
-		throw new ForbiddenException("RBAC does not allow");
+
+		try {
+			// Can only change the description of the Blueprint
+			JSONObject jo = getContent(ctype, content);
+			Set<String> keys = jo.keySet();
+			if (keys.contains(Blueprint.UUID_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the Blueprint's UUID.");
+			}
+			if (keys.contains(Blueprint.NAME_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the Blueprint's name.");
+			}
+			if (keys.contains(Blueprint.VERSION_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the Blueprint's version.");
+			}
+			if (keys.contains(Blueprint.YAML_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the Blueprint's YAML.");
+			}
+			if (keys.contains(Blueprint.DESCRIPTION_TAG)) {
+				String description = jo.getString(Blueprint.DESCRIPTION_TAG);
+				if (!description.equals(bp.getDescription())) {
+					bp.setDescription(description);
+					bp.updateBlueprint();
+				}
+			}
+			return Response.ok().build();
+		} catch (JSONException e) {
+			logger.warn(e.toString());
+			throw new BadRequestException(e.toString());
+		}
 	}
 
 	@DELETE

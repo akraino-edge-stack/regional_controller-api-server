@@ -26,7 +26,7 @@ from datetime import timedelta
 import sys
 import requests
 
-DAG_NAME = '##PHASE##-##UUID##'
+DAG_NAME = '##PHASE##-##WFINDEX##-##UUID##'
 
 default_args = {
     'owner': 'airflow',
@@ -68,7 +68,7 @@ t1 = PythonOperator(task_id='preamble', provide_context=True, python_callable=pr
 
 # Note the space at the end of the bash_command value is REQUIRED
 t2 = BashOperator(task_id='maintask',
-	bash_command='chmod +x /workflow/##PHASE##-##UUID##/##WFNAME##; /bin/bash /workflow/##PHASE##-##UUID##/##WFNAME## ',
+	bash_command='chmod +x /workflow/##PHASE##-##WFINDEX##-##UUID##/##WFNAME##; /bin/bash /workflow/##PHASE##-##WFINDEX##-##UUID##/##WFNAME## ',
 	dag=dag)
 
 t3 = PythonOperator(task_id='postamble', provide_context=True, python_callable=postamble, dag=dag)

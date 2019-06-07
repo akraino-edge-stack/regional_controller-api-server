@@ -17,13 +17,14 @@
 package org.akraino.regional_controller.workflow;
 
 import org.akraino.regional_controller.beans.POD;
+import org.akraino.regional_controller.beans.PODWorkflow;
 
 /**
  * The interface to the Workflow engine.
  */
 public interface WorkFlow {
-	public boolean initialize(POD pod, String phase);
+	public boolean initialize(POD pod, PODWorkflow pwf);
 	public void start();
 	public void cancel();
-	public boolean isFinished();
+	public boolean isRunning();
 }

@@ -19,6 +19,7 @@ package org.akraino.regional_controller.api.v1;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
@@ -45,6 +46,7 @@ import org.akraino.regional_controller.db.DB;
 import org.akraino.regional_controller.db.DBFactory;
 import org.akraino.regional_controller.utils.JSONtoYAML;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 @Path(NodeAPI.NODE_PATH)
@@ -159,46 +161,64 @@ public class NodeAPI extends APIBase {
 	@PUT
 	@Path("/{uuid}")
 	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(MediaType.APPLICATION_JSON)
-	public String putNodesJSON(
+	public Response putNodes(
 		@HeaderParam(SESSION_TOKEN_HDR) final String token,
 		@HeaderParam(REAL_IP_HDR)       final String realIp,
 		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
 		@PathParam("uuid") String uuid,
 		String content
 	) {
-		JSONObject jo = putNodesCommon(token, realIp, uuid);
-		return jo.toString();
-	}
-
-	@PUT
-	@Path("/{uuid}")
-	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(APPLICATION_YAML)
-	public String putNodesYAML(
-		@HeaderParam(SESSION_TOKEN_HDR) final String token,
-		@HeaderParam(REAL_IP_HDR)       final String realIp,
-		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
-	  	@PathParam("uuid") String uuid,
-	  	String content
-	) {
-		JSONObject jo = putNodesCommon(token, realIp, uuid);
-		return new JSONtoYAML(jo).toString();
-	}
-
-	private JSONObject putNodesCommon(String token, String realIp, String uuid) {
 		String method = "PUT /api/v1/node/"+uuid;
 		User u = checkToken(token, method, realIp);
 		checkRBAC(u, NODE_UPDATE_RBAC, method, realIp);
 
-		Node bp = Node.getNodeByUUID(uuid);
-		if (bp == null) {
+		Node n = Node.getNodeByUUID(uuid);
+		if (n == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
 			throw new NotFoundException();
 		}
-		// For now, we ALWAYS disallow this operation
-		api_logger.info("{} user {}, realip {} => 403", method, u.getName(), realIp);
-		throw new ForbiddenException("RBAC does not allow");
+
+		try {
+			// Can only change the name, description & YAML of the Node
+			JSONObject jo = getContent(ctype, content);
+			Set<String> keys = jo.keySet();
+			if (keys.contains(Node.UUID_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the Node's UUID.");
+			}
+			boolean doupdate = false;
+			if (keys.contains(Node.NAME_TAG)) {
+				String name = jo.getString(Node.NAME_TAG);
+				if (!name.equals(n.getName())) {
+					n.setName(name);
+					doupdate = true;
+				}
+			}
+			if (keys.contains(Node.DESCRIPTION_TAG)) {
+				String description = jo.getString(Node.DESCRIPTION_TAG);
+				if (!description.equals(n.getDescription())) {
+					n.setDescription(description);
+					doupdate = true;
+				}
+			}
+			if (keys.contains(Node.YAML_TAG)) {
+				JSONObject yaml = jo.getJSONObject(Node.YAML_TAG);
+				// Make sure this Node is not in use
+				for (Edgesite es : Edgesite.getEdgesites()) {
+					if (es.getNodes().contains(uuid)) {
+						throw new ForbiddenException("Not allowed to modify the YAML for a Node that is in use.");
+					}
+				}
+				n.setYaml(yaml.toString());
+				doupdate = true;
+			}
+			if (doupdate) {
+				n.updateNode();
+			}
+			return Response.ok().build();
+		} catch (JSONException e) {
+			logger.warn(e.toString());
+			throw new BadRequestException(e.toString());
+		}
 	}
 
 	@DELETE

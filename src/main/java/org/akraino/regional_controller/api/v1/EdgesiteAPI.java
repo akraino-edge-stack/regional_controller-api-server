@@ -19,6 +19,8 @@ package org.akraino.regional_controller.api.v1;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
@@ -39,7 +41,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.akraino.regional_controller.beans.Edgesite;
+import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.POD;
+import org.akraino.regional_controller.beans.Region;
 import org.akraino.regional_controller.beans.User;
 import org.akraino.regional_controller.db.DB;
 import org.akraino.regional_controller.db.DBFactory;
@@ -166,32 +170,13 @@ public class EdgesiteAPI extends APIBase {
 
 	@PUT
 	@Path("/{uuid}")
-	@Produces(MediaType.APPLICATION_JSON)
-	public String putEdgesiteDetailsJSON(
+	public Response putEdgesite(
 		@HeaderParam(SESSION_TOKEN_HDR) final String token,
 		@HeaderParam(REAL_IP_HDR)       final String realIp,
 		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
 		@PathParam("uuid") String uuid,
 		String content)
 	{
-		JSONObject jo = putEdgesiteCommon(token, realIp, uuid);
-		return jo.toString();
-	}
-
-	@PUT
-	@Path("/{uuid}")
-	@Produces(APPLICATION_YAML)
-	public String putEdgesiteDetailsYAML(
-		@HeaderParam(SESSION_TOKEN_HDR) final String token,
-		@HeaderParam(REAL_IP_HDR)       final String realIp,
-		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
-		@PathParam("uuid") String uuid,
-		String content)
-	{
-		JSONObject jo = putEdgesiteCommon(token, realIp, uuid);
-		return jo.toString();
-	}
-	private JSONObject putEdgesiteCommon(String token, String realIp, String uuid) {
 		String method = "PUT /api/v1/edgesite/"+uuid;
 		User u = checkToken(token, method, realIp);
 		checkRBAC(u, EDGESITE_UPDATE_RBAC, method, realIp);
@@ -201,9 +186,90 @@ public class EdgesiteAPI extends APIBase {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
 			throw new NotFoundException();
 		}
-		// For now, we ALWAYS disallow this operation
-		api_logger.info("{} user {}, realip {} => 403", method, u.getName(), realIp);
-		throw new ForbiddenException("RBAC does not allow");
+
+		try {
+			// Can only change the name & description of the Edgesite
+			JSONObject jo = getContent(ctype, content);
+			Set<String> keys = jo.keySet();
+			if (keys.contains(Edgesite.UUID_TAG)) {
+				throw new ForbiddenException("Not allowed to modify the Edgesite's UUID.");
+			}
+			boolean doupdate = false;
+			if (keys.contains(Edgesite.NAME_TAG)) {
+				String name = jo.getString(Edgesite.NAME_TAG);
+				if (!name.equals(es.getName())) {
+					es.setName(name);
+					doupdate = true;
+				}
+			}
+			if (keys.contains(Edgesite.DESCRIPTION_TAG)) {
+				String description = jo.getString(Edgesite.DESCRIPTION_TAG);
+				if (!description.equals(es.getDescription())) {
+					es.setDescription(description);
+					doupdate = true;
+				}
+			}
+			Set<String> nset = null;
+			if (keys.contains(Edgesite.NODES_TAG)) {
+				// Make sure all of the Nodes are valid and not in use
+				JSONArray nodes = jo.getJSONArray(Edgesite.NODES_TAG);
+				if (nodes == null || nodes.length() == 0) {
+					logger.warn("No nodes listed in JSON");
+					throw new BadRequestException("No nodes listed in JSON");
+				}
+				nset = new TreeSet<>();
+				for (int i = 0; i < nodes.length(); i++) {
+					String nodeid = nodes.getString(i);
+					Node node = Node.getNodeByUUID(nodeid);
+					if (node == null) {
+						logger.warn("Invalid Node UUID="+nodeid);
+						throw new BadRequestException("Invalid Node uuid "+nodeid);
+					}
+					Edgesite es2 = node.getEdgesite();
+					if (es2 != null && !es2.getUuid().equals(es.getUuid())) {
+						logger.warn("Node is already a member of EdgeSite "+es2.getUuid());
+						throw new BadRequestException("Node is already a member of EdgeSite "+es2.getUuid());
+					}
+					nset.add(nodeid);
+				}
+				if (es.getPOD() != null) {
+					// TODO -  If the Edge Site is currently being used by a POD, then the list of nodes may only be expanded, and nodes currently in use may not be removed.
+				}
+			}
+			Set<String> rset = null;
+			if (keys.contains(Edgesite.REGIONS_TAG)) {
+				// Make sure all regions are valid
+				JSONArray regions = jo.getJSONArray(Edgesite.REGIONS_TAG);
+				if (regions == null) {
+					regions = new JSONArray();
+				}
+				rset = new TreeSet<>();
+				for (int i = 0; i < regions.length(); i++) {
+					String regionid = regions.getString(i);
+					Region reg = Region.getRegionByUUID(regionid);
+					if (reg == null) {
+						logger.warn("Invalid Region UUID "+regionid);
+						throw new BadRequestException("Invalid Region UUID "+regionid);
+					}
+					rset.add(regionid);
+				}
+			}
+			if (nset != null) {
+				es.setNodes(nset);
+				doupdate = true;
+			}
+			if (rset != null) {
+				es.setRegions(rset);
+				doupdate = true;
+			}
+			if (doupdate) {
+				es.updateEdgesite();
+			}
+			return Response.ok().build();
+		} catch (JSONException e) {
+			logger.warn(e.toString());
+			throw new BadRequestException(e.toString());
+		}
 	}
 
 	@DELETE
