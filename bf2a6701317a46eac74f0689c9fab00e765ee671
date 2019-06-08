@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "8e077466_d3d91251",
+        "filename": "src/main/resources/template_shell.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 43,
+      "author": {
+        "id": 45
+      },
+      "writtenOn": "2019-06-08T17:38:19Z",
+      "side": 1,
+      "message": "Fix description",
+      "range": {
+        "startLine": 43,
+        "startChar": 1,
+        "endLine": 43,
+        "endChar": 12
+      },
+      "revId": "bf2a6701317a46eac74f0689c9fab00e765ee671",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0267ed9a_a8a9bf9a",
+        "filename": "src/site/docs/api.rst",
+        "patchSetId": 1
+      },
+      "lineNbr": 923,
+      "author": {
+        "id": 45
+      },
+      "writtenOn": "2019-06-08T17:38:19Z",
+      "side": 1,
+      "message": "spelling - workflow",
+      "range": {
+        "startLine": 923,
+        "startChar": 13,
+        "endLine": 923,
+        "endChar": 20
+      },
+      "revId": "bf2a6701317a46eac74f0689c9fab00e765ee671",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    }
+  ]
+}
