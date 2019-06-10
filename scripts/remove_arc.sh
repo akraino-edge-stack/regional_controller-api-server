@@ -27,7 +27,6 @@ export  PREFIX=${PREFIX:-"arc"}
 export NETWORK=${NETWORK:-"${PREFIX}-net"}
 
 CONTAINERS="
-${PREFIX}-camunda
 ${PREFIX}-airflow-redis
 ${PREFIX}-airflow-postgres
 ${PREFIX}-airflow-webserver
@@ -36,7 +35,6 @@ ${PREFIX}-airflow-scheduler
 ${PREFIX}-airflow-worker
 ${PREFIX}-nginx
 ${PREFIX}-api
-${PREFIX}-volume_init
 ${PREFIX}-db
 ${PREFIX}-ldap"
 
