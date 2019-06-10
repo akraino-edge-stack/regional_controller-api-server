@@ -29,7 +29,7 @@ RUN \
 	apt-get upgrade -yqq  && \
 	apt-get install -yqq --no-install-recommends docker-ce && \
 	usermod -aG docker airflow && \
-	pip install docker
+	pip install docker psycopg2 psycopg2-binary 'redis>=3.2.0'
 USER airflow
 
 # Note: the docker group id (999) needs to match both inside and outside of the container!
