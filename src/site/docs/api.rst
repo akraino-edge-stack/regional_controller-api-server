@@ -955,6 +955,58 @@ Return Code  Reason
 409          The object is in use and cannot be deleted.
 ===========  ======================================================================
 
+.. _podevent-api:
+
+POD Event API
+-------------
+POST /api/v1/podevent
+^^^^^^^^^^^^^^^^^^^^^
+
+Posts a POD Event to the RC for storage.  The POD Event should be either JSON or YAML,
+and should contain the UUID of the POD this event is connected to, an event level, and a
+message; e.g.
+
+.. code-block:: yaml
+
+    uuid: d72e1901-b9b3-4137-b217-fc3cae4575ac
+    level: INFO
+    message: Starting create workflow for POD d72e1901-b9b3-4137-b217-fc3cae4575ac
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+200          Event received and processed correctly.
+400          Some required peice of information is missing.
+===========  ======================================================================
+
+GET /api/v1/podevent/``{uuid}``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Returns a list of POD events for the specific POD identified by ``UUID``.
+
+Example YAML output from the API:
+
+.. code-block:: yaml
+
+  events:
+  - {level: INFO, time: '2019-06-13 16:56:19.0', message: Pod created.}
+  - {level: INFO, time: '2019-06-13 16:56:19.0', message: 'Starting workflow: create'}
+  - {level: INFO, time: '2019-06-13 16:56:19.0', message: 'Workflow directory created:
+      $DROOT/workflow/create-0-d72e1901-b9b3-4137-b217-fc3cae4575ac'}
+  - {level: INFO, time: '2019-06-13 16:56:19.0', message: 'Workflow fetched: http://www.example.org/blueprints/work-flow-v0.1.sh'}
+  - {level: INFO, time: '2019-06-13 16:56:19.0', message: Workflow template created.}
+  - {level: INFO, time: '2019-06-13 16:57:02.0', message: Starting create workflow for
+      POD d72e1901-b9b3-4137-b217-fc3cae4575ac}
+  - {level: INFO, time: '2019-06-13 18:27:45.0', message: Finishing create workflow
+      for POD d72e1901-b9b3-4137-b217-fc3cae4575ac}
+  - {level: STATUS, time: '2019-06-13 18:27:45.0', message: 'State changed to: ACTIVE'}
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+200          Successful execution.
+===========  ======================================================================
+
 .. _version-api:
 
 Version API

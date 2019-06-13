@@ -30,6 +30,7 @@ HARDWARE         The list of Hardware profiles that this RC knows about.
 NODE             The list of Nodes that this RC knows about.
 POD              The list of PODs that this RC knows about.
 POD_EVENTS       A list of events that occur per POD during the lifecycle of each POD.
+POD_WORKFLOWS    Details about each specific workflow that is run on behalf of a POD.
 REGION           The list of Regions that this RC knows about.
 SESSIONS         The list of user sessions that this RC knows about.
 ===============  =========================================================
