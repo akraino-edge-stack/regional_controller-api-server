@@ -117,6 +117,7 @@ The options and arguments to the *rc_loaddata* command may be displayed by invok
 
 .. code-block:: bash
 
+  $ ./rc_loaddata --help
   usage: rc_loaddata [-h] [-H HOST] [-u USER] [-p PASSWORD]
                      [-s {hardware,regions,nodes,edgesites,blueprints,pods}]
                      [-A] [-D] [-M]

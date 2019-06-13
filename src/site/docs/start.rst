@@ -44,7 +44,7 @@ CERTDIR       ${DROOT}/nginx/cert                              Alternate directo
 API_IMAGE     nexus3.akraino.org:10003/akraino/arc_api:latest  The Docker image used for the API server.
 AF_IMAGE      nexus3.akraino.org:10003/akraino/airflow:latest  The Docker image used for the Apache Airflow workflow engine.
 DB_IMAGE      mariadb:10.4                                     The Docker image used for the database.
-LDAP_IMAGE    osixia/openldap:1.2.3                            The Docker image used for the LDAP server.
+LDAP_IMAGE    osixia/openldap:1.2.4                            The Docker image used for the LDAP server.
 ============  ================================================ ===========================================================
 
 NGiNX will only allow HTTPS (port 443) access.
