@@ -67,11 +67,19 @@ def postamble(ds, **kwargs):
 	create_podevent('Finishing ##PHASE## workflow for POD ##UUID##')
 	create_podevent('State changed to: ACTIVE', level='STATUS')
 
+def failure(ds, **kwargs):
+	print('POSTAMBLE ------------------------------------------------------------------------')
+	create_podevent('Finishing ##PHASE## workflow for POD ##UUID##, Failed')
+	create_podevent('State changed to: FAILED', level='STATUS')
+
 t1 = PythonOperator(task_id='preamble',  provide_context=True, python_callable=preamble, dag=dag)
 
 t2 = PythonOperator(task_id='maintask',  provide_context=True, python_callable=##WFNAME##.start, dag=dag)
 
 t3 = PythonOperator(task_id='postamble', provide_context=True, python_callable=postamble, dag=dag)
 
+t4 = PythonOperator(task_id='failure', provide_context=True, python_callable=failure, dag=dag, trigger_rule='all_failed')
+
 t2.set_upstream(t1)
 t3.set_upstream(t2)
+t4.set_upstream(t2)

@@ -39,7 +39,7 @@ public class User extends BaseBean {
 			return null;
 		}
 		String hash2 = sha256Hex(password);
-		if (!u.getPasswordHash().equals(hash2)) {
+		if (!u.getPasswordHash().equalsIgnoreCase(hash2)) {
 			logger.info("Password hash does not match: "+name);
 			return null;
 		}
