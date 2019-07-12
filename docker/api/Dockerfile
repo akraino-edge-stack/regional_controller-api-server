@@ -14,14 +14,14 @@
 # limitations under the License.
 #
 
-# To build:  docker build -f Dockerfile.api -t akraino/arc_api .
+# To build:  docker build -f Dockerfile -t akraino/arc_api .
 
 # Use the standard Tomcat container, with the following additions:
 # 1. add netstat and ps
 # 2. add our files and remove demo webapps
 # 3. run as user tomcat (=1000)
 
-FROM tomcat:8.5.40
+FROM tomcat:8.5.43
 RUN \
   apt-get update -y && \
   apt-get install -yqq --no-install-recommends net-tools procps && \
