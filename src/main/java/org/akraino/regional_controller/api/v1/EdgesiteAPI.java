@@ -295,8 +295,13 @@ public class EdgesiteAPI extends APIBase {
 		// Check if Edgesite is in use (any PODs have edgesite == uuid), if so send a 409
 		POD p = e.getPOD();
 		if (p != null) {
-			api_logger.info("{} user {}, realip {} => 409", method, u.getName(), realIp);
-			throw new ClientErrorException("This Edgesite is still in use by POD "+p.getUuid(), HttpServletResponse.SC_CONFLICT);
+			if (p.getState() != POD.State.DEAD) {
+				api_logger.info("{} user {}, realip {} => 409", method, u.getName(), realIp);
+				throw new ClientErrorException("This Edgesite is still in use by POD "+p.getUuid(), HttpServletResponse.SC_CONFLICT);
+			}
+			// You can delete an Edgesite if it is being used by a DEAD POD
+			// (the POD state changes to ZOMBIE)
+			p.setState(POD.State.ZOMBIE);
 		}
 		try {
 			DB db = DBFactory.getDB();

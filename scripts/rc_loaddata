@@ -120,9 +120,24 @@ def delete_objects(rc, type, smap):
                 print('Deleted type=%s uuid=%s  %s' % (stype, uuid, resp))
 
 def match_objects(rc, type, smap):
-    # add the items in smap not in remote
-    # del the items in remote not in smap
-    print("rc_loaddata: -M option not yet implemented.")
+    resp = fetch_remote(rc, type)
+    rnames = [item['name'] for item in resp]
+
+    # Delete the items in remote not in smap
+    deldict = {}
+    for item in rnames:
+        if not item in smap:
+            deldict[item] = {}
+    if len(deldict) > 0:
+        delete_objects(rc, type, deldict)
+
+    # Add the items in smap not in remote
+    adddict = {}
+    for item in smap:
+        if not item in rnames:
+            adddict[item] = smap[item]
+    if len(adddict) > 0:
+        add_objects(rc, type, adddict)
 
 def main():
     parser = argparse.ArgumentParser(description='Add/delete objects from a Regional Controller. The objects are retrieved from one or more YAML files.')
@@ -153,11 +168,14 @@ def main():
             if (args.section == None or section in args.section) and section in ymap:
                 print ('Process section: '+section)
                 delete_objects(rc, section, safe_array(ymap[section]))
-    else:
-         for section in SECTIONS:
+    elif args.op == 'match':
+         for section in reversed(SECTIONS):
             if (args.section == None or section in args.section) and section in ymap:
                 print ('Process section: '+section)
                 match_objects(rc, section, safe_array(ymap[section]))
+    else:
+         print('Unknown operator: '+args.op)
+         sys.exit(1)
 
     sys.exit(0)
 

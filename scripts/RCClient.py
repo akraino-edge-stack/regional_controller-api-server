@@ -46,9 +46,14 @@ class RCClient(object):
         self._pswd   = password
         self._token  = None
         self._accept = JSON + ', ' + YAML
-        self._url    = 'http://' + server + ':' + str(port)
-        if (port % 1000) == 443:
-            self._url = 'https://' + server + ':' + str(port)
+        if ':' in server:
+            ix = server.index(':')
+            self._server = server[:ix]
+            self._port   = int(server[ix+1:])
+        method = 'http'
+        if (self._port % 1000) == 443:
+            method = 'https'
+        self._url = '%s://%s:%d' % (method, self._server, self._port)
 
     def prefer_yaml(self):
         """ Set the Accept: header to prefer YAML over JSON """
