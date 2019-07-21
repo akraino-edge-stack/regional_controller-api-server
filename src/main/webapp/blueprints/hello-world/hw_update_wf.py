@@ -22,7 +22,7 @@ import POD
 WORKDIR = os.path.abspath(os.path.dirname(__file__))
 
 def start(ds, **kwargs):
-	print('Running the Hello World create workflow!')
+	print('Running the Hello World update workflow!')
 	print('POD ID is ' + POD.POD)
 
 	yaml      = read_yaml(WORKDIR + '/INPUT.yaml')

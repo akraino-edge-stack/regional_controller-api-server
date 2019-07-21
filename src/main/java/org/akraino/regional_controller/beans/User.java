@@ -19,8 +19,18 @@ package org.akraino.regional_controller.beans;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
+
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.WebApplicationException;
 
 import org.akraino.regional_controller.db.DB;
 import org.akraino.regional_controller.db.DBFactory;
@@ -30,6 +40,72 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class User extends BaseBean {
+	public static final String PASSWORD_TAG = "password";
+	public static final String ROLES_TAG    = "roles";
+
+	// 22 alphanumeric chars = 128 bits of entropy
+	// https://en.wikipedia.org/wiki/Password_strength
+	public static final String HI_STRENGTH_RE = "[a-zA-Z0-9 -]{22,}";
+
+	public static String createUser(JSONObject json, User creating_user) throws WebApplicationException {
+		Logger logger = LogManager.getLogger();
+		String n = json.optString(NAME_TAG);
+		if (n == null || "".equals(n)) {
+			logger.warn("Missing name");
+			throw new BadRequestException("Missing name");
+		}
+		String d = json.optString(DESCRIPTION_TAG);
+		if (d == null) {
+			d = "";
+		}
+		String pw = json.optString(PASSWORD_TAG);
+		if (pw == null || "".equals(pw)) {
+			logger.warn("Missing version");
+			throw new BadRequestException("Missing password");
+		}
+		if (! pw.matches(HI_STRENGTH_RE)) {
+			String m = "Password is not strong enough; must match the regex: "+HI_STRENGTH_RE;
+			logger.warn(m);
+			throw new BadRequestException(m);
+		}
+		JSONArray roles = json.optJSONArray(ROLES_TAG);
+		Set<Role> newroles = null;
+		if (roles == null) {
+			// No roles specified, so use creating user's roles
+			newroles = creating_user.getRoles();
+		} else {
+			// Verify passed in role list is a subset of the roles of the creating user
+			newroles = new TreeSet<>();
+			Set<Role> croles = creating_user.getRoles();
+			for (int i = 0; i < roles.length(); i++) {
+				Role r = roleInSet(roles.getString(i), croles);
+				if (r != null) {
+					newroles.add(r);
+				} else {
+					logger.warn("The requesting user does not possess the role: "+r);
+					throw new BadRequestException("The requesting user does not possess the role: "+r);
+				}
+			}
+		}
+
+		// Find a new, unused UUID
+		UUID u;
+		do {
+			u = UUID.randomUUID();
+		} while (getUserByUUID(u.toString()) != null);
+		String uuid = u.toString();
+		User user = new User(uuid, n, sha256Hex(pw), d);
+		user.setRoles(newroles);
+
+		try {
+			DB db = DBFactory.getDB();
+			db.createUser(user);
+			return uuid;
+		} catch (SQLException e1) {
+			throw new InternalServerErrorException(e1.getMessage());
+		}
+	}
+
 	public static User getUser(String name, String password) {
 		DB db = DBFactory.getDB();
 		User u = db.getUser(name);
@@ -44,6 +120,45 @@ public class User extends BaseBean {
 			return null;
 		}
 		return u;
+	}
+
+	public static Collection<User> getUsers() {
+		Map<String, User> map = pullFromDB();
+		return map.values();
+	}
+
+	public static User getUserByUUID(final String uuid) {
+		Map<String, User> map = pullFromDB();
+		return map.get(uuid);
+	}
+
+	public void updateUser() throws WebApplicationException {
+		try {
+			DB db = DBFactory.getDB();
+			db.updateUser(this);
+		} catch (SQLException e1) {
+			throw new InternalServerErrorException(e1.getMessage());
+		}
+	}
+
+	private static Map<String, User> pullFromDB() {
+		Map<String, User> map = new HashMap<>();
+		DB db = DBFactory.getDB();
+		List<User> list = db.getUsers();
+		for (User b : list) {
+			map.put(b.getUuid(), b);
+		}
+		return map;
+	}
+
+	public static Role roleInSet(final String name, Set<Role> roles) {
+		for (Role xr : roles) {
+			if (xr.getName().equals(name))
+				return xr;
+			if (xr.getUuid().equals(name))
+				return xr;
+		}
+		return null;
 	}
 
 	private static String sha256Hex(String arg) {
@@ -64,8 +179,8 @@ public class User extends BaseBean {
 		return hexString.toString().toUpperCase();
 	}
 
-	private final String pwhash;
-	private       Set<Role> roles;
+	private String pwhash;
+	private Set<Role> roles;
 
 	public User(String uuid, String name, String pwhash, String description) {
 		super(uuid, name, description);
@@ -75,6 +190,10 @@ public class User extends BaseBean {
 
 	public String getPasswordHash() {
 		return pwhash;
+	}
+
+	public void setPassword(String pw) {
+		this.pwhash = sha256Hex(pw);
 	}
 
 	public Set<Role> getRoles() {

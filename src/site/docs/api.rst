@@ -595,7 +595,7 @@ Return Code  Reason
 
 Blueprint API
 -------------
-The Blueprint API is used for maintain the list of Blueprints installed in the RC.
+The Blueprint API is used to maintain the list of Blueprints installed in the RC.
 
 POST /api/v1/blueprint
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -1007,33 +1007,190 @@ Return Code  Reason
 200          Successful execution.
 ===========  ======================================================================
 
-.. _version-api:
+.. _user-api:
 
-Version API
+User API
 -----------
-The Version API is used for to retrieve the versions of the various running containers
-that comprise the Regional Controller, as well as the versions of any blueprints or add-on
-software modules installed on the Regional Controller.
+The User API is used to administer the database of users allowed to interact with the
+Regional Controller.
 
-GET /api/v1/version
-^^^^^^^^^^^^^^^^^^^
-Get a list of the versions.
+POST /api/v1/user/
+^^^^^^^^^^^^^^^^^^
+
+Creates a new user.  If created correctly, a code of 201 - Created is returned, and the
+Location: header specifies the URL of the new User object.
+The structure of the JSON to be passed to the POST request is:
 
 .. code-block:: json
 
   {
+    "name": "user name",
+    "password": "user password (required)"
+    "description": "a description of the user (optional)",
+    "roles": [ "list of UUIDs" ]
+  }
+
+The description and the list of roles are optional in this request.  If not provided, the
+roles assigned to the new user will match the list of roles assigned to the creating user.
+If a list of roles *is* provided in the request, it must be a subset of the list of roles
+assigned to the creating user.
+
+The password that is provided must be *high strength*; that is, it must be at least 22
+characters long, consisting of alphanumeric characters, space or dash.
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+201          User created.
+400          Invalid content supplied.
+401          Invalid session or session token.
+403          User does not have RBAC rights to create new users.
+===========  ======================================================================
+
+GET /api/v1/user
+^^^^^^^^^^^^^^^^
+
+Returns a list of users.  Passwords (and password hashes) are not displayed via this API.
+
+.. code-block:: yaml
+
+  users:
+  - roles:
+    - name: fullaccess
+      description: Full read/write access to the ARC
+      attributes: [create-*, delete-*, read-*, update-*]
+      uuid: 0b4fb8e4-445b-11e9-b55e-3b725c041ee5
+    name: admin
+    description: Full Access Admin
+    uuid: 9ef95ad2-3150-11e9-98b6-0017f20dbff8
+    url: /api/v1/user/9ef95ad2-3150-11e9-98b6-0017f20dbff8
+  - roles:
+    - name: readonly
+      description: Read only access to the ARC
+      attributes: [read-*]
+      uuid: 0a77bf16-445b-11e9-81f0-b703010027a6
+    name: readonly
+    description: Read-only Access
+    uuid: 38fdc60e-3dc2-11e9-9df9-53c00beebfb1
+    url: /api/v1/user/38fdc60e-3dc2-11e9-9df9-53c00beebfb1
+  - roles:
+    - name: workflow
+      description: API calls from the Workflow Engine
+      attributes: [create-podevent, read-*]
+      uuid: 8119f7c4-61e3-11e9-ae51-ab0fe1d1c7f5
+    name: workflow
+    description: Workflow Engine
+    uuid: 2d3a342e-6374-11e9-8b05-8333548995aa
+    url: /api/v1/user/2d3a342e-6374-11e9-8b05-8333548995aa
+  - roles:
+    - name: noaccess
+      description: No access at all
+      attributes: []
+      uuid: 0db05ee0-445b-11e9-b61c-c38d36f06889
+    name: noaccess
+    description: Joe Schmoe
+    uuid: a16d969e-4081-11e9-ade7-d3a10ca6285d
+    url: /api/v1/user/a16d969e-4081-11e9-ade7-d3a10ca6285d
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+200          Successful execution.
+401          Invalid session or session token.
+403          User does not have RBAC rights to the content.
+===========  ======================================================================
+
+GET /api/v1/user/``{uuid}``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Returns details about the specific user identified by ``UUID``,
+including a list of roles and role attributes assigned to that user.
+
+.. code-block:: json
+
+  {
+    "description": "Full Access Admin",
+    "name": "admin",
+    "roles": [
+        {
+            "attributes": [
+                "create-*",
+                "delete-*",
+                "read-*",
+                "update-*"
+            ],
+            "description": "Full read/write access to the ARC",
+            "name": "fullaccess",
+            "uuid": "0b4fb8e4-445b-11e9-b55e-3b725c041ee5"
+        }
+    ],
+    "uuid": "9ef95ad2-3150-11e9-98b6-0017f20dbff8"
+  }
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+200          Successful execution.
+401          Invalid session or session token.
+403          User does not have RBAC rights to the content.
+===========  ======================================================================
+
+PUT /api/v1/user/``{uuid}``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Update the User identified by ``uuid``.
+The user is allowed to modify the password, description and list of Roles of the User.
+The user is not allowed to change the name.  If a revised list of roles is provided,
+it replaces the list of roles already assigned to the user, and it must be a subset of
+the list of roles assigned to the user issuing this request.
+
+The content provided to the PUT operation, in either YAML or JSON form, should consist
+of just those fields to be modified.
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+200          Successful execution.
+400          The UUID provided is not a valid UUID, or the parent UUID is invalid.
+401          Invalid session or session token.
+403          User does not have RBAC rights to modify the User.
+404          The UUID provided does not refer to a User.
+===========  ======================================================================
+
+DELETE /api/v1/user/``{uuid}``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Delete the User identified by ``uuid``.
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+200          Successful execution.
+400          The UUID provided is not a valid UUID.
+401          Invalid session or session token.
+403          User does not have RBAC rights to delete the content.
+404          The UUID provided does not refer to a valid user.
+===========  ======================================================================
+
+.. _version-api:
+
+Version API
+-----------
+The Version API is used to retrieve the versions of the various running containers that
+comprise the Regional Controller, as well as the versions of any blueprints or add-on
+software modules installed on the Regional Controller.
+
+GET /api/v1/version
+^^^^^^^^^^^^^^^^^^^
+Get details about the Regional Controller and installed Blueprints.
+
+.. code-block:: json
+
+  {
+    "api_builddate": "2019-06-23 21:19:34",
+    "api_version": "0.0.1-SNAPSHOT",
     "blueprints": {
-        "Radio Edge Cloud": "1.0.0",
-        "Network Cloud - Rover": "0.0.2",
-        "Network Cloud - Unicycle": "0.0.2"
-    },
-    "containers": {
-        "akraino/rc_api": "1.0.0",
-        "osixia/openldap": "1.2.3",
-        "postgres": "9.6.9",
-        "nginx": "1.14.2"
-    }
-    "addons": {
+        "Radio Edge Cloud": "1.0.0"
     }
   }
 

@@ -37,6 +37,7 @@ import org.akraino.regional_controller.api.v1.NodeAPI;
 import org.akraino.regional_controller.api.v1.PODAPI;
 import org.akraino.regional_controller.api.v1.PODEventAPI;
 import org.akraino.regional_controller.api.v1.RegionAPI;
+import org.akraino.regional_controller.api.v1.UserAPI;
 import org.akraino.regional_controller.api.v1.VersionAPI;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
@@ -62,6 +63,7 @@ public class BaseAPITest {
 			PODAPI.class,
 			PODEventAPI.class,
 			RegionAPI.class,
+			UserAPI.class,
 			VersionAPI.class
 		);
 		server = GrizzlyHttpServerFactory.createHttpServer(URI.create(TEST_URI), rc);

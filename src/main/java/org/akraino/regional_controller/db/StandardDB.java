@@ -172,7 +172,7 @@ public class StandardDB implements DB {
 	}
 
 	@Override
-	public void deleteBlueprint(Blueprint b) throws SQLException {
+	public void deleteBlueprint(final Blueprint b) throws SQLException {
 		Connection conn = null;
 		try {
 			conn = getConnection();
@@ -319,7 +319,7 @@ public class StandardDB implements DB {
 	}
 
 	@Override
-	public void deleteEdgesite(Edgesite e) throws SQLException {
+	public void deleteEdgesite(final Edgesite e) throws SQLException {
 		Connection conn = null;
 		try {
 			conn = getConnection();
@@ -394,7 +394,7 @@ public class StandardDB implements DB {
 	}
 
 	@Override
-	public void updateHardware(Hardware h) throws SQLException {
+	public void updateHardware(final Hardware h) throws SQLException {
 		Connection conn = null;
 		try {
 			conn = getConnection();
@@ -415,7 +415,7 @@ public class StandardDB implements DB {
 	}
 
 	@Override
-	public void deleteHardware(Hardware h) throws SQLException {
+	public void deleteHardware(final Hardware h) throws SQLException {
 		Connection conn = null;
 		try {
 			conn = getConnection();
@@ -696,7 +696,7 @@ public class StandardDB implements DB {
 		}
 	}
 
-	public List<PODWorkflow> getPODWorkflows(String uuid) {
+	public List<PODWorkflow> getPODWorkflows(final String uuid) {
 		List<PODWorkflow> list = new ArrayList<>();
 		Connection conn = null;
 		try {
@@ -823,7 +823,7 @@ public class StandardDB implements DB {
 	}
 
 	@Override
-	public void deleteRegion(Region r) throws SQLException {
+	public void deleteRegion(final Region r) throws SQLException {
 		Connection conn = null;
 		try {
 			conn = getConnection();
@@ -842,7 +842,7 @@ public class StandardDB implements DB {
 
 	// SESSIONS ---------------------------------------------------------------------------------------------------------
 	@Override
-	public void createSession(UserSession us) {
+	public void createSession(final UserSession us) {
 		Connection conn = null;
 		try {
 			conn = getConnection();
@@ -867,18 +867,18 @@ public class StandardDB implements DB {
 	}
 
 	@Override
-	public UserSession getSession(String cookie) {
+	public UserSession getSession(final String token) {
 		Connection conn = null;
 		try {
 			conn = getConnection();
 			String sql = "SELECT * FROM AKRAINO.SESSIONS WHERE COOKIE = ?";
 			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-				stmt.setString(1, cookie);
+				stmt.setString(1, token);
 				try (ResultSet rs = stmt.executeQuery()) {
 					if (rs.next() ) {
 						long expires = rs.getLong("expires");
 						User u = getUserByUuid(rs.getString("userid"));
-						UserSession us = new UserSession(u, cookie, expires);
+						UserSession us = new UserSession(u, token, expires);
 						return us;
 					}
 				}
@@ -893,7 +893,7 @@ public class StandardDB implements DB {
 	}
 
 	@Override
-	public void invalidateSession(UserSession us) {
+	public void invalidateSession(final UserSession us) {
 		Connection conn = null;
 		try {
 			conn = getConnection();
@@ -911,11 +911,129 @@ public class StandardDB implements DB {
 
 	// USERS ---------------------------------------------------------------------------------------------------------
 	@Override
-	public User getUser(String name) {
+	public void createUser(final User u) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "INSERT INTO AKRAINO.USERS (uuid, name, description, pwhash) VALUES(?, ?, ?, ?)";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, u.getUuid());
+				stmt.setString(2, u.getName());
+				stmt.setString(3, u.getDescription());
+				stmt.setString(4, u.getPasswordHash());
+				stmt.execute();
+			}
+			sql = "INSERT INTO AKRAINO.USER_ROLES (user_uuid, role_uuid) VALUES(?, ?)";
+			for (Role r : u.getRoles()) {
+				try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+					stmt.setString(1, u.getUuid());
+					stmt.setString(2, r.getUuid());
+					stmt.execute();
+				}
+			}
+		} catch (SQLException e) {
+			logger.error(e);
+			throw e;
+		} finally {
+			releaseConnection(conn);
+		}
+	}
+
+	@Override
+	public List<User> getUsers() {
+		List<User> list = new ArrayList<>();
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			try (Statement stmt = conn.createStatement()) {
+				String sql = "SELECT * FROM AKRAINO.USERS";
+				do {
+					try (ResultSet rs = stmt.executeQuery(sql)) {
+						while (rs.next() ) {
+							String uuid        = rs.getString("uuid");
+							String description = rs.getString("description");
+							User user = new User(
+								uuid,
+								rs.getString("name"),
+								rs.getString("pwhash"),
+								(description == null) ? "" : description
+							);
+							user.setRoles(getRolesForUser(uuid));
+							list.add(user);
+						}
+					}
+				} while (stmt.getMoreResults() || stmt.getUpdateCount() != -1);
+			}
+		} catch (SQLException e) {
+			logger.error(e);
+		} finally {
+			releaseConnection(conn);
+		}
+		return list;
+	}
+
+	@Override
+	public void updateUser(final User u) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "UPDATE AKRAINO.USERS SET description = ?, pwhash = ? WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, u.getDescription());
+				stmt.setString(2, u.getPasswordHash());
+				stmt.setString(3, u.getUuid());
+				stmt.execute();
+			}
+			sql = "DELETE FROM AKRAINO.USER_ROLES WHERE user_uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, u.getUuid());
+				stmt.execute();
+			}
+			sql = "INSERT INTO AKRAINO.USER_ROLES (user_uuid, role_uuid) VALUES(?, ?)";
+			for (Role r : u.getRoles()) {
+				try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+					stmt.setString(1, u.getUuid());
+					stmt.setString(2, r.getUuid());
+					stmt.execute();
+				}
+			}
+		} catch (SQLException ex) {
+			logger.error(ex);
+			throw ex;
+		} finally {
+			releaseConnection(conn);
+		}
+	}
+
+	@Override
+	public void deleteUser(final User u) throws SQLException {
+		Connection conn = null;
+		try {
+			conn = getConnection();
+			String sql = "DELETE FROM AKRAINO.USERS WHERE uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, u.getUuid());
+				stmt.execute();
+			}
+			sql = "DELETE FROM AKRAINO.USER_ROLES WHERE user_uuid = ?";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, u.getUuid());
+				stmt.execute();
+			}
+		} catch (SQLException ex) {
+			logger.error(ex);
+			throw ex;
+		} finally {
+			releaseConnection(conn);
+		}
+	}
+
+	@Override
+	public User getUser(final String name) {
 		return getUserCommon("SELECT * FROM AKRAINO.USERS WHERE name = ?", name);
 	}
 
-	protected User getUserByUuid(String uuid) {
+	protected User getUserByUuid(final String uuid) {
 		return getUserCommon("SELECT * FROM AKRAINO.USERS WHERE uuid = ?", uuid);
 	}
 

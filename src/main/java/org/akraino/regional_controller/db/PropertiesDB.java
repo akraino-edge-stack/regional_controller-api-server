@@ -102,20 +102,22 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
-	public void updateBlueprint(Blueprint b) throws SQLException {
+	public void updateBlueprint(final Blueprint b) throws SQLException {
 		deleteBlueprint(b);
 		createBlueprint(b);
 	}
 
 	@Override
-	public void deleteBlueprint(Blueprint b) {
+	public void deleteBlueprint(final Blueprint b) {
 		deleteProperty(BLUEPRINT_PROPERTY, b.getUuid());
 	}
 
 	// EDGESITES ---------------------------------------------------------------------------------------------------------
+	static final String EDGESITE_PROPERTY = "edgesite";
+
 	@Override
 	public void createEdgesite(final Edgesite e) {
-		String key = nextKey("edgesite");
+		String key = nextKey(EDGESITE_PROPERTY);
 		String[] region1 = e.getRegions().toArray(new String[0]);
 		String value = e.getUuid() + "," + e.getName() + "," + e.getDescription() + "," + region1[0];
 		props.setProperty(key, value);
@@ -124,7 +126,7 @@ public class PropertiesDB implements DB {
 	@Override
 	public List<Edgesite> getEdgesites() {
 		List<Edgesite> list = new ArrayList<>();
-		for (String[] row : rowIterable("edgesite")) {
+		for (String[] row : rowIterable(EDGESITE_PROPERTY)) {
 			Edgesite es = new Edgesite(row[0], row[1], row[2], Arrays.asList(row[3]));
 			list.add(es);
 		}
@@ -132,14 +134,14 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
-	public void updateEdgesite(Edgesite e) throws SQLException {
+	public void updateEdgesite(final Edgesite e) throws SQLException {
 		deleteEdgesite(e);
 		createEdgesite(e);
 	}
 
 	@Override
-	public void deleteEdgesite(Edgesite e) {
-		deleteProperty("edgesite", e.getUuid());
+	public void deleteEdgesite(final Edgesite e) {
+		deleteProperty(EDGESITE_PROPERTY, e.getUuid());
 	}
 
 	// HARDWARE ---------------------------------------------------------------------------------------------------------
@@ -161,13 +163,13 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
-	public void updateHardware(Hardware h) throws SQLException {
+	public void updateHardware(final Hardware h) throws SQLException {
 		deleteHardware(h);
 		createHardware(h);
 	}
 
 	@Override
-	public void deleteHardware(Hardware h) {
+	public void deleteHardware(final Hardware h) {
 		deleteProperty("hardware", h.getUuid());
 	}
 
@@ -190,7 +192,7 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
-	public void updateNode(Node n) throws SQLException {
+	public void updateNode(final Node n) throws SQLException {
 		deleteNode(n);
 		createNode(n);
 	}
@@ -235,7 +237,7 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
-	public List<PODEvent> getPODEvents(String uuid) {
+	public List<PODEvent> getPODEvents(final String uuid) {
 		return new ArrayList<>();
 	}
 
@@ -246,7 +248,7 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
-	public List<PODWorkflow> getPODWorkflows(String uuid) {
+	public List<PODWorkflow> getPODWorkflows(final String uuid) {
 		// do nothing - for now
 		return new ArrayList<>();
 	}
@@ -275,19 +277,19 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
-	public void updateRegion(Region r) throws SQLException {
+	public void updateRegion(final Region r) throws SQLException {
 		deleteRegion(r);
 		createRegion(r);
 	}
 
 	@Override
-	public void deleteRegion(Region r) {
+	public void deleteRegion(final Region r) {
 		deleteProperty("region", r.getUuid());
 	}
 
 	// SESSIONS ---------------------------------------------------------------------------------------------------------
 	@Override
-	public void createSession(UserSession us) {
+	public void createSession(final UserSession us) {
 		if (us != null) {
 			synchronized (sessions) {
 				sessions.put(us.getToken(), us);
@@ -296,12 +298,12 @@ public class PropertiesDB implements DB {
 	}
 
 	@Override
-	public UserSession getSession(String token) {
+	public UserSession getSession(final String token) {
 		return sessions.get(token);
 	}
 
 	@Override
-	public void invalidateSession(UserSession us) {
+	public void invalidateSession(final UserSession us) {
 		if (us != null) {
 			synchronized (sessions) {
 				sessions.remove(us.getToken());
@@ -310,9 +312,44 @@ public class PropertiesDB implements DB {
 	}
 
 	// USERS ---------------------------------------------------------------------------------------------------------
+	static final String USER_PROPERTY = "user";
+
 	@Override
-	public User getUser(String name) {
-		for (String[] row : rowIterable("user")) {
+	public void createUser(final User u) throws SQLException {
+		String key = nextKey(USER_PROPERTY);
+		String value = u.getUuid() + "," + u.getName() + "," + u.getPasswordHash() + "," + u.getDescription();
+		Set<Role> roles = u.getRoles();
+		if (roles.size() > 0) {
+			Role[] rlist = roles.toArray(new Role[0]);
+			value += "," + rlist[0].getName();
+		}
+		props.setProperty(key, value);
+	}
+
+	@Override
+	public List<User> getUsers() {
+		List<User> list = new ArrayList<>();
+		for (String[] row : rowIterable(USER_PROPERTY)) {
+			User u = new User(row[0], row[1], row[2], row[3]);
+			list.add(u);
+		}
+		return list;
+	}
+
+	@Override
+	public void updateUser(final User u) throws SQLException {
+		deleteUser(u);
+		createUser(u);
+	}
+
+	@Override
+	public void deleteUser(final User u) throws SQLException {
+		deleteProperty(USER_PROPERTY, u.getUuid());
+	}
+
+	@Override
+	public User getUser(final String name) {
+		for (String[] row : rowIterable(USER_PROPERTY)) {
 			User u = new User(row[0], row[1], row[2], row[3]);
 			if (name.equals(u.getName())) {
 				if (row.length > 4) {
@@ -327,7 +364,7 @@ public class PropertiesDB implements DB {
 		return null;
 	}
 
-	private Role getRole(String name) {
+	private Role getRole(final String name) {
 		for (String[] row : rowIterable("role")) {
 			String[] attributes = new String[0];
 			if (row.length > 3) {
@@ -375,7 +412,7 @@ public class PropertiesDB implements DB {
 
 		};
 	}
-	private String nextKey(String base) {
+	private String nextKey(final String base) {
 		for (int n = 1; ; n++) {
 			String key = base + "." + n;
 			if (props.getProperty(key) == null) {

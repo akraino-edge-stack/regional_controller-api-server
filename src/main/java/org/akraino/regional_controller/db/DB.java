@@ -63,11 +63,11 @@ public interface DB {
 
 	// PODS_EVENTS
 	public void createPodEvent(final PODEvent pe) throws SQLException;
-	public List<PODEvent> getPODEvents(String uuid);
+	public List<PODEvent> getPODEvents(final String uuid);
 
 	// PODS_WORKFLOWS
 	public void createPodWorkflow(final PODWorkflow pw) throws SQLException;
-	public List<PODWorkflow> getPODWorkflows(String uuid);
+	public List<PODWorkflow> getPODWorkflows(final String uuid);
 	public void updatePodWorkflow(final PODWorkflow pw) throws SQLException;
 
 	// REGIONS
@@ -82,5 +82,9 @@ public interface DB {
 	public void invalidateSession(final UserSession us);
 
 	// USERS
+	public void createUser(final User u) throws SQLException;
 	public User getUser(final String name);
+	public List<User> getUsers();
+	public void updateUser(final User u) throws SQLException;
+	public void deleteUser(final User u) throws SQLException;
 }

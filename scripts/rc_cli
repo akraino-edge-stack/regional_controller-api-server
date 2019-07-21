@@ -30,7 +30,7 @@ import RCClient
 
 JSON   = RCClient.JSON
 DASHES = '-' * 200
-OBJS   = [ 'blueprint', 'edgesite', 'hardware', 'node', 'pod', 'region' ]
+OBJS   = [ 'blueprint', 'edgesite', 'hardware', 'node', 'pod', 'region', 'user' ]
 OPS    = [ 'create', 'delete', 'list', 'show' ]
 
 
@@ -71,7 +71,7 @@ class Base(object):
 		for file in args.args:
 			with open(file) as f:
 				content = yaml.safe_load(f)
-				resp = self._rc.create_of_type(self._type, JSON, content)
+				resp = self._rc.create_of_type(self._type, 'application/yaml', content)
 				if self._rc._laststatus == 201:
 					hdrs = self._rc._lastresponse.headers
 					print(hdrs['Location'])
@@ -159,6 +159,13 @@ class Region(Base):
 	def list(self):
 		self.do_list(('uuid', 'name', 'description', 'parent'), ('UUID', 'Name', 'Description', 'Parent'))
 
+class User(Base):
+	def __init__(self, rc, args):
+		Base.__init__(self, rc, 'user', args)
+
+	def list(self):
+		self.do_list(('uuid', 'name', 'description'), ('UUID', 'Name', 'Description'))
+
 
 def main():
 	parser = argparse.ArgumentParser(description='Perform API calls against a Regional Controller.')
@@ -192,6 +199,9 @@ def main():
 
 		elif args.obj == 'region':
 			thing = Region(rc, args)
+
+		elif args.obj == 'user':
+			thing = User(rc, args)
 
 		else:
 			print('rc_cli: unknown object '+args.obj)

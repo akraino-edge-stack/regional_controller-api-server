@@ -93,6 +93,10 @@ class RCClient(object):
         """ List the Regions available on the RC """
         return self.list_of_type('region')
 
+    def list_users(self):
+        """ List the User available on the RC """
+        return self.list_of_type('user')
+
     def list_versions(self):
         """ List the Version info available on the RC """
         return self.list_of_type('version')
@@ -126,6 +130,9 @@ class RCClient(object):
     def create_region(self, content, ctype=JSON):
         return self.create_of_type('region', ctype, content)
 
+    def create_user(self, content, ctype=JSON):
+        return self.create_of_type('user', ctype, content)
+
     def create_of_type(self, type, ctype, content):
         if self._token == None:
             self.login(self._login, self._pswd)
@@ -153,6 +160,9 @@ class RCClient(object):
 
     def delete_region(self, uuid, ctype=JSON):
         return self.delete_of_type('region', ctype, uuid)
+
+    def delete_user(self, uuid, ctype=JSON):
+        return self.delete_of_type('user', ctype, uuid)
 
     def delete_of_type(self, type, ctype, uuid, force=False):
         if self._token == None:
@@ -184,6 +194,9 @@ class RCClient(object):
 
     def show_region(self, uuid, ctype=JSON):
         return self.show_of_type('region', ctype, uuid)
+
+    def show_user(self, uuid, ctype=JSON):
+        return self.show_of_type('user', ctype, uuid)
 
     def show_of_type(self, type, ctype, uuid):
         if self._token == None:

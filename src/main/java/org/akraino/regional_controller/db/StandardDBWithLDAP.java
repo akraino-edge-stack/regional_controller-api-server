@@ -16,8 +16,15 @@
 
 package org.akraino.regional_controller.db;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -26,6 +33,8 @@ import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
+import javax.naming.directory.BasicAttribute;
+import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
@@ -39,14 +48,17 @@ import org.akraino.regional_controller.beans.User;
  * The StandardDBWithLDAP uses an LDAP server for users, and an SQL DB for the other items required.
  * This is the "production" DB implementation.
  */
+// UUID, name description, pwhash, list of roles
 @SuppressWarnings("unused")
 public class StandardDBWithLDAP extends StandardDB {
 	private static final String LDAP_CONTEXT = "com.sun.jndi.ldap.LdapCtxFactory";
+	private static final String LDAP_AUTH    = "simple";
 
 	private final String ldap_url;
 	private final String ldap_user;
 	private final String ldap_password;
 	private final String search_base;
+	private final Hashtable<String, String> env;
 
 	public StandardDBWithLDAP(Properties api_props) throws ClassNotFoundException {
 		super(api_props);
@@ -54,6 +66,98 @@ public class StandardDBWithLDAP extends StandardDB {
 		this.ldap_user     = api_props.getProperty("ldap.user");
 		this.ldap_password = api_props.getProperty("ldap.password");
 		this.search_base   = api_props.getProperty("ldap.search_base");
+		this.env           = new Hashtable<>();
+		env.put(Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT);
+		env.put(Context.PROVIDER_URL,            ldap_url);
+		env.put(Context.SECURITY_AUTHENTICATION, LDAP_AUTH);
+		env.put(Context.SECURITY_PRINCIPAL,      ldap_user);
+		env.put(Context.SECURITY_CREDENTIALS,    ldap_password);
+	}
+
+	@Override
+	public void createUser(final User u) throws SQLException {
+		LdapContext ctx = null;
+		try {
+			ctx = new InitialLdapContext(env, null);
+
+			Attribute oc = new BasicAttribute("objectClass");
+			oc.add("person");
+			oc.add("inetOrgPerson");
+
+			Attributes entry = new BasicAttributes();
+			entry.put(oc);
+			entry.put(new BasicAttribute("ou", "people"));
+			entry.put(new BasicAttribute("cn", u.getName()));
+			entry.put(new BasicAttribute("sn", u.getName()));
+			entry.put(new BasicAttribute("description", u.getDescription()));
+			entry.put(new BasicAttribute("userPassword", u.getPasswordHash()));	//??
+			entry.put(new BasicAttribute("uid", u.getUuid()));
+
+			String entryDN = String.format("uid=%s,ou=people,dc=akraino,dc=demo", u.getUuid());
+			ctx.createSubcontext(entryDN, entry);
+			// TODO modify role groups
+		} catch (NamingException e) {
+			logger.warn(e);
+		} finally {
+			if (ctx != null) {
+				try {
+					ctx.close();
+				} catch (NamingException e) {
+					// ignore
+				}
+			}
+		}
+	}
+
+	@Override
+	public List<User> getUsers() {
+		List<User> users = new ArrayList<>();
+
+		SearchControls sc = new SearchControls();
+		sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
+		sc.setTimeLimit(30000);
+		sc.setCountLimit(1000);
+
+		LdapContext ctx = null;
+		try {
+			ctx = new InitialLdapContext(env, null);
+			NamingEnumeration<?> results = ctx.search(search_base, "(uid=*)", sc);
+			while (results.hasMore()) {
+				SearchResult sr = (SearchResult) results.next();
+				Attributes attrs = sr.getAttributes();
+				String uuid     = safeget(attrs, "uid");
+				String name     = safeget(attrs, "cn");
+				String password = safeget(attrs, "userPassword");	// hash this!
+				String description = safeget(attrs, "description");
+				System.out.println(uuid + " / " + name + " / " + password + " / " + description);
+				User u = new User(uuid, name, password, (description == null) ? "" : description);
+				// get roles
+				users.add(u);
+			}
+			results.close();
+			return users;
+		} catch (NamingException e) {
+			logger.warn(e);
+		} finally {
+			if (ctx != null) {
+				try {
+					ctx.close();
+				} catch (NamingException e) {
+					// ignore
+				}
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public void updateUser(final User u) throws SQLException {
+		// TODO Auto-generated method stub
+	}
+
+	@Override
+	public void deleteUser(final User u) throws SQLException {
+		// TODO add deleteUser
 	}
 
 	@Override
@@ -67,13 +171,6 @@ public class StandardDBWithLDAP extends StandardDB {
 	}
 
 	private User getUserByFilter(String filter) {
-		Hashtable<String, String> env = new Hashtable<>();
-		env.put(Context.INITIAL_CONTEXT_FACTORY, LDAP_CONTEXT);
-		env.put(Context.PROVIDER_URL,            ldap_url);
-		env.put(Context.SECURITY_AUTHENTICATION, "simple");
-		env.put(Context.SECURITY_PRINCIPAL,      ldap_user);
-		env.put(Context.SECURITY_CREDENTIALS,    ldap_password);
-
 		SearchControls sc = new SearchControls();
 		sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
 		sc.setTimeLimit(30000);
@@ -84,15 +181,16 @@ public class StandardDBWithLDAP extends StandardDB {
 			ctx = new InitialLdapContext(env, null);
 			NamingEnumeration<?> results = ctx.search(search_base, filter, sc);
 			while (results.hasMore()) {
-			  SearchResult sr = (SearchResult) results.next();
-			  Attributes attrs = sr.getAttributes();
-			  String uuid     = safeget(attrs, "uid");
-			  String name     = safeget(attrs, "cn");
-			  String password = safeget(attrs, "userPassword");	// hash this!
-			  String description = safeget(attrs, "description");
-			  System.out.println(uuid + " / " + name + " / " + password + " / " + description);
-			  User u = new User(uuid, name, password, (description == null) ? "" : description);
-			  return u;
+				SearchResult sr = (SearchResult) results.next();
+				Attributes attrs = sr.getAttributes();
+				String uuid     = safeget(attrs, "uid");
+				String name     = safeget(attrs, "cn");
+				String password = safeget(attrs, "userPassword");	// hash this!
+				String description = safeget(attrs, "description");
+				System.out.println(uuid + " / " + name + " / " + password + " / " + description);
+				User u = new User(uuid, name, password, (description == null) ? "" : description);
+				// get roles
+				return u;
 			}
 			results.close();
 		} catch (NamingException e) {
@@ -137,9 +235,9 @@ public class StandardDBWithLDAP extends StandardDB {
 		p.setProperty("db.driver",        "com.mysql.jdbc.Driver");
 
 		StandardDBWithLDAP xx = new StandardDBWithLDAP(p);
-		User u =
+//		User u =
 //			xx.getUserByUuid("2d3a342e-6374-11e9-8b05-8333548995aa");
-			xx.getUser("Noaccess User");
-		System.out.println(u);
+//			xx.getUser("Noaccess User");
+//		System.out.println(u);
 	}
 }

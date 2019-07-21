@@ -30,6 +30,7 @@ import org.junit.runners.Suite;
 	PODAPITest.class,
 	PODEventAPI.class,
 	RegionAPITest.class,
+	UserAPITest.class,
 	VersionAPITest.class
 })
 
