@@ -15,223 +15,288 @@
 # limitations under the License.
 #
 #  rc_cli - Command line interface to the Regional Controller.
-#  usage: rc_cli [ -H host ] [ -u user ] [ -p passwd ] [ -Y ] object operation [ args ... ]
-#     -H host (default localhost)
-#     -u user (default admin)
-#     -p passwd
-#     -Y      (display YAML column in list views)
+#  usage: rc_cli [ -H host ] [ -u user ] [ -p passwd ] object operation [ args ... ]
+#        -H host (default $RC_HOST or localhost)
+#        -u user (default $RC_USER or admin)
+#        -p passwd (default $RC_PW)
 #
 
+import os
 import sys
 import argparse
 import json
-import yaml     # sudo pip install PyYAML
+import yaml        # sudo pip install PyYAML
 import RCClient
 
 JSON   = RCClient.JSON
+YAML   = RCClient.YAML
 DASHES = '-' * 200
-OBJS   = [ 'blueprint', 'edgesite', 'hardware', 'node', 'pod', 'region', 'user' ]
-OPS    = [ 'create', 'delete', 'list', 'show' ]
 
+def fwidth(items, name):
+    """ Given a list of dicts, find the maximum width of the item ''name'' in each dict """
+    width = 0
+    for line in items:
+        width = max(width, len(str(line.get(name, ''))))
+    return width
 
-def fwidth(map, name):
-	w = 0
-	for line in map:
-		w = max(w, len(str(line.get(name, ''))))
-	return w
-
-def getFormat(map, keys):
-	fmt = ""
-	for key in keys:
-		w = fwidth(map, key)
-		w = max(w, len(key))
-		fmt = "%s  %%-%d.%ds" % (fmt, w, w)
-	return fmt[2:]
+def getFormat(items, keys):
+    """ Return a format string for the list of keys and the list of dicts provided """
+    fmt = ""
+    for key in keys:
+        width = fwidth(items, key)
+        width = max(width, len(key))
+        fmt = "%s  %%-%d.%ds" % (fmt, width, width)
+    return fmt[2:]
 
 class Base(object):
-	def __init__(self, rc, type, args):
-		self._rc = rc
-		self._type = type
-		self._doyaml = args.doyaml
-		self._sort = args.sort.lower()
+    def __init__(self, rc, type, args):
+        self._rc = rc
+        self._type = type
 
-	def create(self, args):
-		self.do_create(args)
+    def create(self, args):
+        self.do_create(args)
 
-	def delete(self, args):
-		self.do_delete(args)
+    def delete(self, args):
+        self.do_delete(args)
 
-	def list(self):
-		print("rc_cli: list not yet implemented on this type.")
+    def list(self, args):
+        print('rc_cli: list not yet implemented on this type.')
 
-	def show(self, args):
-		self.do_show(args)
+    def set(self, args):
+        self.do_set(args)
 
-	def do_create(self, args):
-		for file in args.args:
-			with open(file) as f:
-				content = yaml.safe_load(f)
-				resp = self._rc.create_of_type(self._type, 'application/yaml', content)
-				if self._rc._laststatus == 201:
-					hdrs = self._rc._lastresponse.headers
-					print(hdrs['Location'])
-				else:
-					print('rc_api: could not create the %s: %s' % (self._type, resp))
+    def show(self, args):
+        self.do_show(args)
 
-	def do_delete(self, args):
-		for uuid in args.args:
-			resp = self._rc.delete_of_type(self._type, JSON, uuid)
-			if self._rc._laststatus != 204 and self._rc._laststatus != 200:
-				print('rc_api: could not delete the %s with UUID %s: %s' % (self._type, uuid, resp))
+    def update(self, args):
+        print('rc_cli: you cannot update an object of type %s; use the set command.' % (self._type))
 
-	def do_list(self, cols, titles):
-		response = json.loads(self._rc.list_of_type(self._type))
-		items = list(response.values())[0]
-		if self._doyaml == 'yes':
-			cols = cols + ('yaml', )
-			titles = titles + ('YAML', )
-		fmt = getFormat(items, cols)
-		dashtuple = tuple( [DASHES for i in range(len(cols))] )
-		print( fmt % titles )
-		print( fmt % dashtuple )
-		items = sorted(items, key=lambda i: str(i[self._sort]))
-		for r in items:
-			valtuple = tuple( [r.get(k, '') for k in cols] )
-			print( fmt % valtuple )
+    def do_create(self, args):
+        for file in args.files:
+            try:
+                with open(file) as f:
+                    content = yaml.safe_load(f)
+                    resp = self._rc.create_of_type(self._type, YAML, content)
+                    if self._rc._laststatus == 201:
+                        hdrs = self._rc._lastresponse.headers
+                        print(hdrs['Location'])
+                    else:
+                        print('rc_api: could not create the %s: %s' % (self._type, resp))
+            except FileNotFoundError as ex:
+                print('rc_cli: file read error on file %s: %s' % (file, str(ex)))
 
-	def do_show(self, args):
-		for uuid in args.args:
-			resp = self._rc.show_of_type(self._type, JSON, uuid)
-			if self._rc._laststatus != 200:
-				print('rc_api: could not show the %s with UUID %s' % (self._type, uuid))
-			else:
-				print('---')
-				js = json.loads(resp)
-				yaml.safe_dump(js, sys.stdout, default_flow_style=False)
+    def do_delete(self, args):
+        for uuid in args.uuids:
+            resp = self._rc.delete_of_type(self._type, JSON, uuid)
+            if self._rc._laststatus != 204 and self._rc._laststatus != 200:
+                print('rc_api: could not delete the %s with UUID %s: %s' % (self._type, uuid, resp))
+
+    def do_list(self, args, cols, titles):
+        response = json.loads(self._rc.list_of_type(self._type))
+        items = list(response.values())[0]
+        if args.doyaml == 'yes':
+            cols = cols + ('yaml', )
+            titles = titles + ('YAML', )
+        fmt = getFormat(items, cols)
+        dashtuple = tuple( [DASHES for i in range(len(cols))] )
+        print( fmt % titles )
+        print( fmt % dashtuple )
+        self._sort = args.sort.lower()
+        items = sorted(items, key=lambda i: str(i[self._sort]))
+        for r in items:
+            valtuple = tuple( [r.get(k, '') for k in cols] )
+            print( fmt % valtuple )
+
+    def do_set(self, args):
+        change = {}
+        if args.new_name != None:
+            change['name'] = args.new_name
+        if args.new_description != None:
+            change['description'] = args.new_description
+        if args.new_parent != None:
+            change['parent'] = args.new_parent
+        if args.new_blueprint != None:
+            change['blueprint'] = args.new_blueprint
+        if args.new_regions != None:
+            change['regions'] = args.new_regions.split(' ')
+        if args.new_nodes != None:
+            change['nodes'] = args.new_nodes.split(' ')
+        for uuid in args.uuids:
+            resp = self._rc.update_of_type(self._type, JSON, uuid, change)
+            if self._rc._laststatus == 200:
+                print('%s updated.' % (uuid))
+            else:
+                print('rc_api: could not update the %s with UUID %s: %s' % (self._type, uuid, resp))
+
+    def do_show(self, args):
+        for uuid in args.uuids:
+            resp = self._rc.show_of_type(self._type, JSON, uuid)
+            if self._rc._laststatus != 200:
+                print('rc_api: could not show the %s with UUID %s' % (self._type, uuid))
+            else:
+                print('---')
+                js = json.loads(resp)
+                yaml.safe_dump(js, sys.stdout, default_flow_style=False)
 
 class Blueprint(Base):
-	def __init__(self, rc, args):
-		Base.__init__(self, rc, 'blueprint', args)
+    def __init__(self, rc, args):
+        Base.__init__(self, rc, 'blueprint', args)
 
-	def list(self):
-		self.do_list(('uuid', 'name', 'description', 'version'), ('UUID', 'Name', 'Description', 'Version'))
+    def list(self, args):
+        self.do_list(args, ('uuid', 'name', 'description', 'version'), ('UUID', 'Name', 'Description', 'Version'))
 
 class Edgesite(Base):
-	def __init__(self, rc, args):
-		Base.__init__(self, rc, 'edgesite', args)
+    def __init__(self, rc, args):
+        Base.__init__(self, rc, 'edgesite', args)
 
-	def list(self):
-		self.do_list(('uuid', 'name', 'description'), ('UUID', 'Name', 'Description'))
+    def list(self, args):
+        self.do_list(args, ('uuid', 'name', 'description'), ('UUID', 'Name', 'Description'))
 
 class Hardware(Base):
-	def __init__(self, rc, args):
-		Base.__init__(self, rc, 'hardware', args)
+    def __init__(self, rc, args):
+        Base.__init__(self, rc, 'hardware', args)
 
-	def list(self):
-		self.do_list(('uuid', 'name', 'description'), ('UUID', 'Name', 'Description'))
+    def list(self, args):
+        self.do_list(args, ('uuid', 'name', 'description'), ('UUID', 'Name', 'Description'))
 
 class Node(Base):
-	def __init__(self, rc, args):
-		Base.__init__(self, rc, 'node', args)
+    def __init__(self, rc, args):
+        Base.__init__(self, rc, 'node', args)
 
-	def list(self):
-		self.do_list(('uuid', 'name', 'description', 'hardware'), ('UUID', 'Name', 'Description', 'Hardware'))
+    def list(self, args):
+        self.do_list(args, ('uuid', 'name', 'description', 'hardware'), ('UUID', 'Name', 'Description', 'Hardware'))
 
 class Pod(Base):
-	def __init__(self, rc, args):
-		Base.__init__(self, rc, 'pod', args)
+    def __init__(self, rc, args):
+        Base.__init__(self, rc, 'pod', args)
 
-	def delete(self, args):
-		for uuid in args.args:
-			# Pass in the "--force" option value
-			resp = self._rc.delete_pod(uuid, ctype=JSON, force=args.force)
-			if self._rc._laststatus != 202 and self._rc._laststatus != 200:
-				print('rc_api: could not delete the POD with UUID %s: %s', (uuid, resp))
+    def delete(self, args):
+        for uuid in args.uuids:
+            # Pass in the "--force" option value
+            resp = self._rc.delete_pod(uuid, ctype=JSON, force=args.force)
+            if self._rc._laststatus != 202 and self._rc._laststatus != 200:
+                print('rc_api: could not delete the POD with UUID %s: %s', (uuid, resp))
 
-	def list(self):
-		self.do_list(('uuid', 'name', 'description', 'state', 'blueprint', 'edgesite'),
-			('UUID', 'Name', 'Description', 'State', 'Blueprint UUID', 'Edgesite UUID'))
+    def list(self, args):
+        self.do_list(args,
+                     ('uuid', 'name', 'description', 'state', 'blueprint', 'edgesite'),
+                     ('UUID', 'Name', 'Description', 'State', 'Blueprint UUID', 'Edgesite UUID'))
+
+    def update(self, args):
+        try:
+            with open(args.yaml) as f:
+                content = yaml.safe_load(f)
+                resp = self._rc.update_pod(args.uuid, content, wflow=args.workflow)
+                if self._rc._laststatus != 200:
+                    print('rc_api: could not run workflow %s on POD %s: %s' % (args.workflow, args.uuid, resp))
+        except FileNotFoundError as ex:
+            print('rc_cli: file read error: ' + str(ex))
 
 class Region(Base):
-	def __init__(self, rc, args):
-		Base.__init__(self, rc, 'region', args)
+    def __init__(self, rc, args):
+        Base.__init__(self, rc, 'region', args)
 
-	def list(self):
-		self.do_list(('uuid', 'name', 'description', 'parent'), ('UUID', 'Name', 'Description', 'Parent'))
+    def list(self, args):
+        self.do_list(args, ('uuid', 'name', 'description', 'parent'), ('UUID', 'Name', 'Description', 'Parent'))
 
 class User(Base):
-	def __init__(self, rc, args):
-		Base.__init__(self, rc, 'user', args)
+    def __init__(self, rc, args):
+        Base.__init__(self, rc, 'user', args)
 
-	def list(self):
-		self.do_list(('uuid', 'name', 'description'), ('UUID', 'Name', 'Description'))
+    def list(self, args):
+        self.do_list(args, ('uuid', 'name', 'description'), ('UUID', 'Name', 'Description'))
 
+OBJECTS = {
+    'blueprint': Blueprint,
+    'edgesite':  Edgesite,
+    'hardware':  Hardware,
+    'node':      Node,
+    'pod':       Pod,
+    'region':    Region,
+    'user':      User
+}
 
 def main():
-	parser = argparse.ArgumentParser(description='Perform API calls against a Regional Controller.')
-	parser.add_argument('-H', help='the host of the regional controller (default localhost)', dest='host', default='localhost')
-	parser.add_argument('-u', help='the username to use (default admin)', dest='user', default='admin')
-	parser.add_argument('-p', help='the password to use', dest='password')
-	parser.add_argument('-s', help='the field to sort list views by', dest='sort', default='uuid')
-	parser.add_argument('-F', help='forcibly delete a POD (use with "pod delete")', action='store_const', dest='force', const=True, default=False)
-	parser.add_argument('-Y', help='display YAML columns in the output of list commands', action='store_const', dest='doyaml', const='yes', default='no')
-	parser.add_argument('obj', help='The object to manipulate', metavar='obj', choices=OBJS)
-	parser.add_argument('op',  help='The operation to perform on the object', metavar='op', choices=OPS)
-	parser.add_argument('args', help='Extra arguments for the operation', metavar='args', nargs='*')
-	args = parser.parse_args()
+    parser = argparse.ArgumentParser(description='Perform API calls against a Regional Controller.')
+    parser.add_argument('-H', help='the host of the regional controller (default $RC_HOST or localhost)', dest='host', default=os.getenv('RC_HOST', default='localhost'))
+    parser.add_argument('-u', help='the username to use (default $RC_USER or admin)', dest='user', default=os.getenv('RC_USER', default='admin'))
+    parser.add_argument('-p', help='the password to use (default $RC_PW)', dest='password', default=os.getenv('RC_PW'))
+    parser.add_argument('obj', help='The object type to manipulate', metavar='obj', choices=OBJECTS)
+    sp = parser.add_subparsers(help='The operation to perform on the object', dest='op')  # required=True (added in Python 3.7)
 
-	try:
-		rc = RCClient.RCClient(server=args.host, login=args.user, password=args.password)
-		if args.obj == 'blueprint':
-			thing = Blueprint(rc, args)
+    cmd1 = sp.add_parser('create', help='create new objects from a set of YAML files')
+    cmd1.add_argument('files', help='List of file names for the create command', metavar='file', nargs='+')
 
-		elif args.obj == 'edgesite':
-			thing = Edgesite(rc, args)
+    cmd2 = sp.add_parser('delete', help='delete one or more objects by UUID')
+    cmd2.add_argument('-F', help='forcibly delete a POD', action='store_const', dest='force', const=True, default=False)
+    cmd2.add_argument('--force', help='forcibly delete a POD', action='store_const', dest='force', const=True, default=False)
+    cmd2.add_argument('uuids', help='List of object UUIDs to be deleted', metavar='uuid', nargs='+')
 
-		elif args.obj == 'hardware':
-			thing = Hardware(rc, args)
+    cmd3 = sp.add_parser('list', help='list all objects of a type')
+    cmd3.add_argument('-s', help='the field to sort the list by', dest='sort', default='uuid')
+    cmd3.add_argument('--sort', help='the field to sort the list by', dest='sort', default='uuid')
+    cmd3.add_argument('-Y', help='display YAML columns in the output of list commands', action='store_const', dest='doyaml', const='yes', default='no')
+    cmd3.add_argument('--yaml', help='display YAML columns in the output of list commands', action='store_const', dest='doyaml', const='yes', default='no')
 
-		elif args.obj == 'node':
-			thing = Node(rc, args)
+    cmd4 = sp.add_parser('set', help='set individual attributes of an existing object')
+    cmd4.add_argument('--name', help='the new object name', dest='new_name')
+    cmd4.add_argument('--description', help='the new object description', dest='new_description')
+    cmd4.add_argument('--parent', help='the new parent region UUID', dest='new_parent')
+    cmd4.add_argument('--blueprint', help='the new blueprint UUID', dest='new_blueprint')
+    cmd4.add_argument('--regions', help='a new, space separated list of region UUIDs', dest='new_regions')
+    cmd4.add_argument('--nodes',   help='a new, space separated list of node UUIDs', dest='new_nodes')
+    cmd4.add_argument('uuids', help='List of object UUIDs to update', metavar='uuid', nargs='+')
 
-		elif args.obj == 'pod':
-			thing = Pod(rc, args)
+    cmd5 = sp.add_parser('show', help='show all details of one or more objects by UUID')
+    cmd5.add_argument('uuids', help='List of object UUIDs to show', metavar='uuid', nargs='+')
 
-		elif args.obj == 'region':
-			thing = Region(rc, args)
+    cmd6 = sp.add_parser('update', help='update a POD by running a workflow')
+    cmd6.add_argument('uuid', help='UUID of the POD to update', metavar='uuid')
+    cmd6.add_argument('workflow', help='The name of the workflow in the PODs blueprint to exercise', metavar='workflow')
+    cmd6.add_argument('yaml', help='a file containing YAML to deliver to the POD', metavar='yaml')
 
-		elif args.obj == 'user':
-			thing = User(rc, args)
+    args = parser.parse_args()
 
-		else:
-			print('rc_cli: unknown object '+args.obj)
-			sys.exit(1)
+    try:
+        rc = RCClient.RCClient(server=args.host, login=args.user, password=args.password)
+        klass = OBJECTS[args.obj]
+        if klass != None:
+            thing = klass(rc, args)
+        else:
+            print('rc_cli: unknown object '+args.obj)
+            sys.exit(1)
 
-		if args.op == 'create':
-			thing.create(args)
+        if args.op == 'create':
+            thing.create(args)
 
-		elif args.op == 'delete':
-			thing.delete(args)
+        elif args.op == 'delete':
+            thing.delete(args)
 
-		elif args.op == 'list':
-			thing.list()
+        elif args.op == 'list':
+            thing.list(args)
 
-		elif args.op == 'show':
-			thing.show(args)
+        elif args.op == 'set':
+            thing.set(args)
 
-		else:
-			print('rc_cli: unknown operation '+args.op)
-			sys.exit(1)
+        elif args.op == 'show':
+            thing.show(args)
 
-	except KeyError as ex:
-		if str(ex) == "'x-arc-token'":
-			print('rc_cli: login error, did you provide a password?')
-			sys.exit(2)
-		else:
-			print('rc_cli: internal key error')
-			sys.exit(3)
+        elif args.op == 'update':
+            thing.update(args)
 
-	sys.exit(0)
+        else:
+            print('rc_cli: unknown operation '+str(args.op))
+            sys.exit(1)
+
+    except KeyError as ex:
+        if str(ex) == "'x-arc-token'":
+            print('rc_cli: login error, did you provide a password?')
+            sys.exit(2)
+        else:
+            print('rc_cli: internal key error')
+            sys.exit(3)
+
+    sys.exit(0)
 
 if __name__ == "__main__":
-	main()
+    main()

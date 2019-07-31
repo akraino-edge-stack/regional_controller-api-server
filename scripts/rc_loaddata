@@ -26,44 +26,51 @@
 #     -M      (match yamls to host)
 #
 
+import os
 import sys
 import argparse
 import json
+from uuid import UUID
 import yaml     # sudo pip install PyYAML
 import RCClient
-from uuid import UUID
 
 SECTIONS = [ 'hardware', 'regions', 'nodes', 'edgesites', 'blueprints', 'pods' ]
 
 def singular(s):
+    """ Return the singular of the argument """
     if s.endswith('s'):
         return s[0:len(s)-1]
     return s
 
 def is_uuid(uuid):
+    """ Check if the argument is a valid UUID """
     try:
-        uuid_obj = UUID(uuid, version=4)
+        UUID(uuid, version=4)
         return True
     except:
         return False
 
 def fetch_remote(rc, type):
+    """ Return a list of all the objects of ''type'' from the Regional Controller """
     s = rc.list_of_type(singular(type))
     remote = json.loads(s)
     return remote[type]
 
 def find_item(array, name):
-    for map in array:
-        if map['name'] == name:
-            return map
+    """ Find the item in an array of items where item['name'] is nsme """
+    for item in array:
+        if item['name'] == name:
+            return item
     return None
 
 def safe_array(a):
-    if a == None:
+    """ Return an empty array if the argument is None """
+    if a is None:
         a = []
     return a
 
 def add_objects(rc, type, smap):
+    """ Add objects in the YAML to the Regional Controller. """
     stype = singular(type)
     hwarray = None
     nodearray = None
@@ -76,7 +83,7 @@ def add_objects(rc, type, smap):
             for i in range(len(nodes)):
                 node = nodes[i]
                 if not is_uuid(node):
-                    if nodearray == None:
+                    if nodearray is None:
                         nodearray = fetch_remote(rc, 'nodes')
                     remoteitem = find_item(nodearray, node)
                     if remoteitem != None:
@@ -85,7 +92,7 @@ def add_objects(rc, type, smap):
             for i in range(len(regs)):
                 reg = regs[i]
                 if not is_uuid(reg):
-                    if regarray == None:
+                    if regarray is None:
                         regarray = fetch_remote(rc, 'regions')
                     remoteitem = find_item(regarray, reg)
                     if remoteitem != None:
@@ -94,7 +101,7 @@ def add_objects(rc, type, smap):
             hw = content['hardware']
             if not is_uuid(hw):
                 # map a hardware name to UUID
-                if hwarray == None:
+                if hwarray is None:
                     hwarray = fetch_remote(rc, 'hardware')
                 remoteitem = find_item(hwarray, hw)
                 if remoteitem != None:
@@ -104,6 +111,7 @@ def add_objects(rc, type, smap):
         print('Created type=%s name=%s  %s' % (stype, item, resp))
 
 def delete_objects(rc, type, smap):
+    """ Delete objects in the YAML from the Regional Controller. """
     stype = singular(type)
     r2 = fetch_remote(rc, type)
     for item in smap:
@@ -120,13 +128,14 @@ def delete_objects(rc, type, smap):
                 print('Deleted type=%s uuid=%s  %s' % (stype, uuid, resp))
 
 def match_objects(rc, type, smap):
+    """ Match objects in the YAML with the Regional Controller. """
     resp = fetch_remote(rc, type)
     rnames = [item['name'] for item in resp]
 
     # Delete the items in remote not in smap
     deldict = {}
     for item in rnames:
-        if not item in smap:
+        if item not in smap:
             deldict[item] = {}
     if len(deldict) > 0:
         delete_objects(rc, type, deldict)
@@ -134,16 +143,17 @@ def match_objects(rc, type, smap):
     # Add the items in smap not in remote
     adddict = {}
     for item in smap:
-        if not item in rnames:
+        if item not in rnames:
             adddict[item] = smap[item]
     if len(adddict) > 0:
         add_objects(rc, type, adddict)
 
 def main():
+    """ Add objects in the YAML to the Regional Controller. """
     parser = argparse.ArgumentParser(description='Add/delete objects from a Regional Controller. The objects are retrieved from one or more YAML files.')
-    parser.add_argument('-H', help='the host of the regional controller (default localhost)', dest='host', default='localhost')
-    parser.add_argument('-u', help='the username to use (default admin)', dest='user', default='admin')
-    parser.add_argument('-p', help='the password to use', dest='password')
+    parser.add_argument('-H', help='the host of the regional controller (default $RC_HOST or  localhost)', dest='host', default=os.getenv('RC_HOST', default='localhost'))
+    parser.add_argument('-u', help='the username to use (default $RC_USER or  admin)', dest='user', default=os.getenv('RC_USER', default='admin'))
+    parser.add_argument('-p', help='the password to use (default $RC_PW)', dest='password', default=os.getenv('RC_PW'))
     parser.add_argument('-s', help='only process the named section of the YAMLs (default all)', dest='section', action='append', choices=SECTIONS)
     parser.add_argument('-A', help='add new entries in YAMLs to the RC', action='store_const', dest='op', const='add', default='add')
     parser.add_argument('-D', help='delete entries in YAMLs from the RC', action='store_const', dest='op', const='delete')
@@ -160,22 +170,22 @@ def main():
     rc = RCClient.RCClient(server=args.host, login=args.user, password=args.password)
     if args.op == 'add':
         for section in SECTIONS:
-            if (args.section == None or section in args.section) and section in ymap:
+            if (args.section is None or section in args.section) and section in ymap:
                 print ('Process section: '+section)
                 add_objects(rc, section, safe_array(ymap[section]))
     elif args.op == 'delete':
         for section in reversed(SECTIONS):
-            if (args.section == None or section in args.section) and section in ymap:
+            if (args.section is None or section in args.section) and section in ymap:
                 print ('Process section: '+section)
                 delete_objects(rc, section, safe_array(ymap[section]))
     elif args.op == 'match':
-         for section in reversed(SECTIONS):
-            if (args.section == None or section in args.section) and section in ymap:
+        for section in reversed(SECTIONS):
+            if (args.section is None or section in args.section) and section in ymap:
                 print ('Process section: '+section)
                 match_objects(rc, section, safe_array(ymap[section]))
     else:
-         print('Unknown operator: '+args.op)
-         sys.exit(1)
+        print('Unknown operator: '+args.op)
+        sys.exit(1)
 
     sys.exit(0)
 
