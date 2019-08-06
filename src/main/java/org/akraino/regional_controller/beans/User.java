@@ -52,7 +52,7 @@ public class User extends BaseBean {
 		String n = json.optString(NAME_TAG);
 		if (n == null || "".equals(n)) {
 			logger.warn("Missing name");
-			throw new BadRequestException("Missing name");
+			throw new BadRequestException("ARC-1013: Missing name");
 		}
 		String d = json.optString(DESCRIPTION_TAG);
 		if (d == null) {
@@ -61,12 +61,12 @@ public class User extends BaseBean {
 		String pw = json.optString(PASSWORD_TAG);
 		if (pw == null || "".equals(pw)) {
 			logger.warn("Missing version");
-			throw new BadRequestException("Missing password");
+			throw new BadRequestException("ARC-1014: Missing password");
 		}
 		if (! pw.matches(HI_STRENGTH_RE)) {
 			String m = "Password is not strong enough; must match the regex: "+HI_STRENGTH_RE;
 			logger.warn(m);
-			throw new BadRequestException(m);
+			throw new BadRequestException("ARC-1032: "+m);
 		}
 		JSONArray roles = json.optJSONArray(ROLES_TAG);
 		Set<Role> newroles = null;
@@ -83,7 +83,7 @@ public class User extends BaseBean {
 					newroles.add(r);
 				} else {
 					logger.warn("The requesting user does not possess the role: "+r);
-					throw new BadRequestException("The requesting user does not possess the role: "+r);
+					throw new BadRequestException("ARC-1023: The requesting user does not possess the role: "+r);
 				}
 			}
 		}
@@ -102,7 +102,7 @@ public class User extends BaseBean {
 			db.createUser(user);
 			return uuid;
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 
@@ -137,7 +137,7 @@ public class User extends BaseBean {
 			DB db = DBFactory.getDB();
 			db.updateUser(this);
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 

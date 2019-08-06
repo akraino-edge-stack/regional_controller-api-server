@@ -66,7 +66,7 @@ public class PODEventAPI extends APIBase {
 				.ok()
 				.build();
 		} catch (JSONException e) {
-			throw new BadRequestException("Invalid JSON object");
+			throw new BadRequestException("ARC-1002: Invalid JSON object: "+e);
 		}
 	}
 
@@ -101,7 +101,7 @@ public class PODEventAPI extends APIBase {
 
 		POD p = POD.getPodByUUID(uuid);
 		if (p == null) {
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		JSONArray ja = new JSONArray();
 		for (PODEvent pe : p.getPodEvents()) {

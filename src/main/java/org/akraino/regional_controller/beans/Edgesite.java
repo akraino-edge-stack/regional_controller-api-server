@@ -46,7 +46,7 @@ public class Edgesite extends BaseBean {
 		String n = json.optString(NAME_TAG);
 		if (n == null || "".equals(n)) {
 			logger.warn("Missing name");
-			throw new BadRequestException("Missing name");
+			throw new BadRequestException("ARC-1013: Missing name");
 		}
 		String d = json.optString(DESCRIPTION_TAG);
 		if (d == null) {
@@ -57,7 +57,7 @@ public class Edgesite extends BaseBean {
 		JSONArray nodes = json.optJSONArray(NODES_TAG);
 		if (nodes == null || nodes.length() == 0) {
 			logger.warn("No nodes listed in JSON");
-			throw new BadRequestException("No nodes listed in JSON");
+			throw new BadRequestException("ARC-1019: No nodes listed in JSON");
 		}
 		Set<String> nset = new TreeSet<>();
 		for (int i = 0; i < nodes.length(); i++) {
@@ -65,12 +65,12 @@ public class Edgesite extends BaseBean {
 			Node node = Node.getNodeByUUID(nodeid);
 			if (node == null) {
 				logger.warn("Invalid Node UUID="+nodeid);
-				throw new BadRequestException("Invalid Node uuid "+nodeid);
+				throw new BadRequestException("ARC-1003: Invalid Node UUID "+nodeid);
 			}
 			Edgesite es = node.getEdgesite();
 			if (es != null) {
 				logger.warn("Node is already a member of EdgeSite "+es.getUuid());
-				throw new BadRequestException("Node is already a member of EdgeSite "+es.getUuid());
+				throw new BadRequestException("ARC-1020: Node is already a member of EdgeSite "+es.getUuid());
 			}
 			nset.add(nodeid);
 		}
@@ -79,7 +79,7 @@ public class Edgesite extends BaseBean {
 		JSONArray regions = json.optJSONArray(REGIONS_TAG);
 		if (regions == null || regions.length() == 0) {
 			logger.warn("Missing regions");
-			throw new BadRequestException("Missing regions");
+			throw new BadRequestException("ARC-1015: Missing regions");
 		}
 		Set<String> rset = new TreeSet<>();
 		for (int i = 0; i < regions.length(); i++) {
@@ -87,7 +87,7 @@ public class Edgesite extends BaseBean {
 			Region reg = Region.getRegionByUUID(regionid);
 			if (reg == null) {
 				logger.warn("Invalid Region uuid "+regionid);
-				throw new BadRequestException("Invalid Region uuid "+regionid);
+				throw new BadRequestException("ARC-1004: Invalid Region UUID "+regionid);
 			}
 			rset.add(regionid);
 		}
@@ -102,7 +102,7 @@ public class Edgesite extends BaseBean {
 		} else {
 			// Use the UUID provided
 			if (getEdgesiteByUUID(uuid) != null) {
-				throw new BadRequestException("UUID "+uuid+" is already in use.");
+				throw new BadRequestException("ARC-1027: UUID "+uuid+" is already in use.");
 			}
 		}
 		Edgesite e = new Edgesite(uuid, n, d);
@@ -113,7 +113,7 @@ public class Edgesite extends BaseBean {
 			db.createEdgesite(e);
 			return uuid;
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 
@@ -147,7 +147,7 @@ public class Edgesite extends BaseBean {
 			DB db = DBFactory.getDB();
 			db.updateEdgesite(this);
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 

@@ -36,7 +36,7 @@ public class Hardware extends BaseBean {
 	public static String createHardware(JSONObject json) throws WebApplicationException {
 		String n = json.optString(NAME_TAG);
 		if (n == null || "".equals(n))
-			throw new BadRequestException("Missing name");
+			throw new BadRequestException("ARC-1013: Missing name");
 		String d = json.optString(DESCRIPTION_TAG);
 		String uuid = json.optString(UUID_TAG);
 		if (uuid == null || "".equals(uuid)) {
@@ -49,7 +49,7 @@ public class Hardware extends BaseBean {
 		} else {
 			// Use the UUID provided
 			if (getHardwareByUUID(uuid) != null) {
-				throw new BadRequestException("UUID "+uuid+" is already in use.");
+				throw new BadRequestException("ARC-1027: UUID "+uuid+" is already in use.");
 			}
 		}
 		Hardware h2 = new Hardware(uuid, n, d, json.toString());
@@ -58,7 +58,7 @@ public class Hardware extends BaseBean {
 			db.createHardware(h2);
 			return uuid;
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 
@@ -77,7 +77,7 @@ public class Hardware extends BaseBean {
 			DB db = DBFactory.getDB();
 			db.updateHardware(this);
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 

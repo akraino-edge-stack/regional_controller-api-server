@@ -61,19 +61,19 @@ public class POD extends BaseBean {
 	public static POD createPod(JSONObject json) throws WebApplicationException {
 		String n = json.optString(NAME_TAG);
 		if (n == null || "".equals(n))
-			throw new BadRequestException("Missing name");
+			throw new BadRequestException("ARC-1013: Missing name");
 
 		String blueprint = json.optString(BLUEPRINT_TAG);
 		if (blueprint == null || "".equals(blueprint))
-			throw new BadRequestException("Missing blueprint UUID");
+			throw new BadRequestException("ARC-1009: Missing blueprint UUID");
 		if (Blueprint.getBlueprintByUUID(blueprint) == null)
-			throw new BadRequestException("There is no blueprint with UUID="+blueprint);
+			throw new BadRequestException("ARC-1025: There is no blueprint with UUID="+blueprint);
 
 		String edgesite = json.optString(EDGESITE_TAG);
 		if (edgesite == null || "".equals(edgesite))
-			throw new BadRequestException("Missing edgesite UUID");
+			throw new BadRequestException("ARC-1010: Missing edgesite UUID");
 		if (Edgesite.getEdgesiteByUUID(edgesite) == null)
-			throw new BadRequestException("There is no edgesite with UUID="+edgesite);
+			throw new BadRequestException("ARC-1026: There is no edgesite with UUID="+edgesite);
 
 		String desc = json.optString(DESCRIPTION_TAG);
 		desc = (desc == null) ? "" : desc;
@@ -93,7 +93,7 @@ public class POD extends BaseBean {
 			pe.writeEvent();
 			return p;
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 
@@ -102,7 +102,7 @@ public class POD extends BaseBean {
 			DB db = DBFactory.getDB();
 			db.updatePod(this);
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 

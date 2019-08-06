@@ -89,7 +89,7 @@ public class LoginAPI extends APIBase {
 			User u = User.getUser(username, password);
 			if (u == null) {
 				api_logger.info("{} user {}, realip {} => 404", method, "-", realIp);
-				throw new NotFoundException("not found.");
+				throw new NotFoundException("ARC-4001: object not found");
 			}
 			UserSession us = new UserSession(u, max_age, realIp);	// creates the token
 			api_logger.info("{} user {}, realip {} => 201", method, u.getName(), realIp);
@@ -100,7 +100,7 @@ public class LoginAPI extends APIBase {
 		} catch (JSONException | URISyntaxException e) {
 			logger.warn(e.toString());
 			api_logger.info("{} user {}, realip {} => 400", method, "-", realIp);
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -139,7 +139,7 @@ public class LoginAPI extends APIBase {
 			String m = "No login for token: "+token;
 			logger.warn(m);
 			api_logger.info("GET /api/v1/login user {}, realip {} => 401", "-", realIp);
-			throw new NotAuthorizedException(m);
+			throw new NotAuthorizedException("ARC-4007: "+m);
 		}
 		api_logger.info("GET /api/v1/login user {}, realip {} => 200", us.getUser().getName(), realIp);
 		return us;
@@ -162,7 +162,7 @@ public class LoginAPI extends APIBase {
 			String m = "No login for token: "+token;
 			logger.warn(m);
 			api_logger.info("DELETE /api/v1/login user {}, realip {} => 401", "-", realIp);
-			throw new NotAuthorizedException(m);
+			throw new NotAuthorizedException("ARC-4007: "+m);
 		}
 		us.invalidate();
 		api_logger.info("DELETE /api/v1/login user {}, realip {} => 200", us.getUser().getName(), realIp);

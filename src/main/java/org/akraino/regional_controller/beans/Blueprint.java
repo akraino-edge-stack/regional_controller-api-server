@@ -59,16 +59,16 @@ public class Blueprint extends BaseBean {
 		String schema = json.optString(SCHEMA_TAG);
 		if (schema == null || "".equals(schema)) {
 			logger.warn("Missing schema version");
-			throw new BadRequestException("Missing schema version");
+			throw new BadRequestException("ARC-1016: Missing schema version");
 		}
 		if (!schema_set.contains(schema)) {
 			logger.warn("The schema version "+schema+" is not recognized by this software.");
-			throw new BadRequestException("The schema version "+schema+" is not recognized by this software.");
+			throw new BadRequestException("ARC-1024: The schema version "+schema+" is not recognized by this software.");
 		}
 		String n = json.optString(NAME_TAG);
 		if (n == null || "".equals(n)) {
 			logger.warn("Missing name");
-			throw new BadRequestException("Missing name");
+			throw new BadRequestException("ARC-1013: Missing name");
 		}
 		String d = json.optString(DESCRIPTION_TAG);
 		if (d == null) {
@@ -77,12 +77,12 @@ public class Blueprint extends BaseBean {
 		String v = json.optString(VERSION_TAG);
 		if (v == null || "".equals(v)) {
 			logger.warn("Missing version");
-			throw new BadRequestException("Missing version");
+			throw new BadRequestException("ARC-1017: Missing version");
 		}
 		JSONObject y = json.optJSONObject(YAML_TAG);
 		if (y == null) {
 			logger.warn("Missing YAML; are you sure about this Blueprint?");
-			throw new BadRequestException("Missing YAML; are you sure about this Blueprint?");
+			throw new BadRequestException("ARC-1008: Missing YAML; are you sure about this Blueprint?");
 		}
 
 		String uuid = json.optString(UUID_TAG);
@@ -96,7 +96,7 @@ public class Blueprint extends BaseBean {
 		} else {
 			// Use the UUID provided
 			if (getBlueprintByUUID(uuid) != null) {
-				throw new BadRequestException("UUID "+uuid+" is already in use.");
+				throw new BadRequestException("ARC-1027: UUID "+uuid+" is already in use.");
 			}
 		}
 		Blueprint b = new Blueprint(uuid, n, d, v, (new JSONtoYAML(y)).toString());
@@ -106,7 +106,7 @@ public class Blueprint extends BaseBean {
 			if (!nm.matches(WF_REGEX)) {
 				String m = "The workflow name '"+nm+"' is invalid.";
 				logger.warn(m);
-				throw new BadRequestException(m);
+				throw new BadRequestException("ARC-1031: "+m);
 			}
 		}
 		try {
@@ -114,7 +114,7 @@ public class Blueprint extends BaseBean {
 			db.createBlueprint(b);
 			return uuid;
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 
@@ -133,7 +133,7 @@ public class Blueprint extends BaseBean {
 			DB db = DBFactory.getDB();
 			db.updateBlueprint(this);
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 

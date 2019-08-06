@@ -81,7 +81,7 @@ public class BlueprintAPI extends APIBase {
 			return Response.created(new URI(url)).build();
 		} catch (URISyntaxException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -154,7 +154,7 @@ public class BlueprintAPI extends APIBase {
 		Blueprint bp = Blueprint.getBlueprintByUUID(uuid);
 		if (bp == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		api_logger.info("{} user {}, realip {} => 200", method, u.getName(), realIp);
 		return bp.toJSON();
@@ -177,7 +177,7 @@ public class BlueprintAPI extends APIBase {
 		Blueprint bp = Blueprint.getBlueprintByUUID(uuid);
 		if (bp == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		try {
@@ -185,16 +185,16 @@ public class BlueprintAPI extends APIBase {
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
 			if (keys.contains(Blueprint.UUID_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the Blueprint's UUID.");
+				throw new ForbiddenException("ARC-3002: Not allowed to modify the Blueprint's UUID.");
 			}
 			if (keys.contains(Blueprint.NAME_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the Blueprint's name.");
+				throw new ForbiddenException("ARC-3004: Not allowed to modify the Blueprint's name.");
 			}
 			if (keys.contains(Blueprint.VERSION_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the Blueprint's version.");
+				throw new ForbiddenException("ARC-3005: Not allowed to modify the Blueprint's version.");
 			}
 			if (keys.contains(Blueprint.YAML_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the Blueprint's YAML.");
+				throw new ForbiddenException("ARC-3003: Not allowed to modify the Blueprint's YAML.");
 			}
 			if (keys.contains(Blueprint.DESCRIPTION_TAG)) {
 				String description = jo.getString(Blueprint.DESCRIPTION_TAG);
@@ -206,7 +206,7 @@ public class BlueprintAPI extends APIBase {
 			return Response.ok().build();
 		} catch (JSONException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -223,19 +223,19 @@ public class BlueprintAPI extends APIBase {
 
 		if (uuid == null || "".equals(uuid)) {
 			api_logger.info("{} user {}, realip {} => 400", method, u.getName(), realIp);
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Blueprint b = Blueprint.getBlueprintByUUID(uuid);
 		if (b == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		// Check if blueprint is in use (any PODs have blueprint == uuid), if so send a 409
 		List<POD> list = b.getPODs();
 		if (list != null && !list.isEmpty()) {
 			POD p1 = list.get(0);
 			api_logger.info("{} user {}, realip {} => 409", method, u.getName(), realIp);
-			throw new ClientErrorException("This Blueprint is still in use by POD "+p1.getUuid(), HttpServletResponse.SC_CONFLICT);
+			throw new ClientErrorException("ARC-2001: This Blueprint is still in use by POD "+p1.getUuid(), HttpServletResponse.SC_CONFLICT);
 		}
 		try {
 			DB db = DBFactory.getDB();

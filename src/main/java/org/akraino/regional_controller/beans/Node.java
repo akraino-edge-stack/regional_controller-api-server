@@ -39,11 +39,11 @@ public class Node extends BaseBean {
 	public static String createNode(JSONObject json) throws WebApplicationException {
 		String n = json.getString(NAME_TAG);
 		if (n == null || "".equals(n))
-			throw new BadRequestException("Missing name");
+			throw new BadRequestException("ARC-1013: Missing name");
 		String d = json.optString(DESCRIPTION_TAG);
 		String h = json.optString(HARDWARE_TAG);
 		if (Hardware.getHardwareByUUID(h) == null) {
-			throw new BadRequestException("Invalid Hardware uuid "+h);
+			throw new BadRequestException("ARC-1001: Invalid Hardware UUID "+h);
 		}
 		JSONObject y = json.optJSONObject(YAML_TAG);
 		if (y == null) {
@@ -61,7 +61,7 @@ public class Node extends BaseBean {
 		} else {
 			// Use the UUID provided
 			if (getNodeByUUID(uuid) != null) {
-				throw new BadRequestException("UUID "+uuid+" is already in use.");
+				throw new BadRequestException("ARC-1027: UUID "+uuid+" is already in use.");
 			}
 		}
 		Node n2 = new Node(uuid, n, d, h, (new JSONtoYAML(y)).toString());
@@ -70,7 +70,7 @@ public class Node extends BaseBean {
 			db.createNode(n2);
 			return uuid;
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 
@@ -89,7 +89,7 @@ public class Node extends BaseBean {
 			DB db = DBFactory.getDB();
 			db.updateNode(this);
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 

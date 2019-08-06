@@ -78,7 +78,7 @@ public class HardwareAPI extends APIBase {
 		} catch (URISyntaxException e) {
 			logger.warn(e.toString());
 			api_logger.info("{} user {}, realip {} => 400", method, u.getName(), realIp);
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -148,11 +148,11 @@ public class HardwareAPI extends APIBase {
 		checkRBAC(u, HARDWARE_READ_RBAC, method, realIp);
 
 		if (uuid == null || "".equals(uuid)) {
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Hardware h = Hardware.getHardwareByUUID(uuid);
 		if (h == null) {
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		return h.toJSON();
 	}
@@ -174,7 +174,7 @@ public class HardwareAPI extends APIBase {
 		Hardware hw = Hardware.getHardwareByUUID(uuid);
 		if (hw == null) {
 			api_logger.info("{} user {}, realip {} => 404", "PUT /api/v1/hardware/"+uuid, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		try {
@@ -182,7 +182,7 @@ public class HardwareAPI extends APIBase {
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
 			if (keys.contains(Hardware.UUID_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the Hardware profile's UUID.");
+				throw new ForbiddenException("ARC-3007: Not allowed to modify the Hardware profile's UUID.");
 			}
 			boolean doupdate = false;
 			if (keys.contains(Hardware.NAME_TAG)) {
@@ -204,7 +204,7 @@ public class HardwareAPI extends APIBase {
 				// Make sure this profile is not in use
 				for (Node n : Node.getNodes()) {
 					if (n.getHardware().equals(uuid)) {
-						throw new ForbiddenException("Not allowed to modify the YAML for a Hardware profile that is in use.");
+						throw new ForbiddenException("ARC-3019: Not allowed to modify the YAML for a Hardware profile that is in use.");
 					}
 				}
 				hw.setYaml(yaml.toString());
@@ -216,7 +216,7 @@ public class HardwareAPI extends APIBase {
 			return Response.ok().build();
 		} catch (JSONException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -232,16 +232,16 @@ public class HardwareAPI extends APIBase {
 		checkRBAC(u, HARDWARE_DELETE_RBAC, method, realIp);
 
 		if (uuid == null || "".equals(uuid)) {
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Hardware h = Hardware.getHardwareByUUID(uuid);
 		if (h == null) {
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		// Check if hardware is in use (any nodes have hardware == uuid), if so send a 409
 		for (Node n : Node.getNodes()) {
 			if (n.getHardware().equals(uuid)) {
-				throw new ClientErrorException("This hardware profile is still in use by Node "+n.getUuid(), HttpServletResponse.SC_CONFLICT);
+				throw new ClientErrorException("ARC-2006: This hardware profile is still in use by Node "+n.getUuid(), HttpServletResponse.SC_CONFLICT);
 			}
 		}
 		try {

@@ -83,14 +83,14 @@ public class RegionAPI extends APIBase {
 			if (uuid == null) {
 				// Region NOT created
 				api_logger.info("{} user {}, realip {} => 400", method, u.getName(), realIp);
-				throw new BadRequestException("Region not created.");
+				throw new BadRequestException("ARC-1022: Region not created.");
 			}
 			api_logger.info("{} user {}, realip {} => 201", method, u.getName(), realIp);
 			return Response.created(new URI("/api/v1/region/"+uuid))
 				.build();
 		} catch (URISyntaxException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -162,11 +162,11 @@ public class RegionAPI extends APIBase {
 		checkRBAC(u, REGION_READ_RBAC, method, realIp);
 
 		if (uuid == null || "".equals(uuid)) {
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Region r = Region.getRegionByUUID(uuid);
 		if (r == null) {
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		// Get a list of Edgesites in the region
 		JSONObject jo = r.toJSON();
@@ -193,12 +193,12 @@ public class RegionAPI extends APIBase {
 		checkRBAC(u, REGION_UPDATE_RBAC, method, realIp);
 
 		if (uuid.equals(Region.UNIVERSAL_REGION)) {
-			throw new ForbiddenException("Not allowed to modify the Universal region.");
+			throw new ForbiddenException("ARC-3016: Not allowed to modify the Universal region.");
 		}
 		Region r = Region.getRegionByUUID(uuid);
 		if (r == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		try {
@@ -206,7 +206,7 @@ public class RegionAPI extends APIBase {
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
 			if (keys.contains(Node.UUID_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the Region's UUID.");
+				throw new ForbiddenException("ARC-3015: Not allowed to modify the Region's UUID.");
 			}
 			boolean doupdate = false;
 			if (keys.contains(Region.NAME_TAG)) {
@@ -228,10 +228,10 @@ public class RegionAPI extends APIBase {
 				if (!parent.equals(r.getParent())) {
 					// Is this a valid parent?
 					if (parent.equals(uuid)) {
-						throw new ForbiddenException("Your parent cannot be yourself!");
+						throw new ForbiddenException("ARC-3022: Your parent cannot be yourself!");
 					}
 					if (Region.getRegionByUUID(parent) == null) {
-						throw new ForbiddenException("No regions exists with UUID "+parent);
+						throw new ForbiddenException("ARC-3001: No regions exists with UUID "+parent);
 					}
 					r.setParent(parent);
 					doupdate = true;
@@ -243,7 +243,7 @@ public class RegionAPI extends APIBase {
 			return Response.ok().build();
 		} catch (JSONException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -260,25 +260,25 @@ public class RegionAPI extends APIBase {
 
 		if (uuid == null || "".equals(uuid)) {
 			api_logger.info("{} user {}, realip {} => 400", method, u.getName(), realIp);
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Region r = Region.getRegionByUUID(uuid);
 		if (r == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		// Check if Region is in use by any other Regions or Edgesite
 		List<Region> list = r.getChildRegions();
 		if (list != null && !list.isEmpty()) {
 			Region r1 = list.get(0);
 			api_logger.info("{} user {}, realip {} => 409", method, u.getName(), realIp);
-			throw new ClientErrorException("This Region is still in use by another Region "+r1.getUuid(), HttpServletResponse.SC_CONFLICT);
+			throw new ClientErrorException("ARC-2005: This Region is still in use by another Region "+r1.getUuid(), HttpServletResponse.SC_CONFLICT);
 		}
 		List<Edgesite> list2 = r.getEdgesites();
 		if (list2 != null && list2.size() > 0) {
 			Edgesite e1 = list2.get(0);
 			api_logger.info("{} user {}, realip {} => 409", method, u.getName(), realIp);
-			throw new ClientErrorException("This Region is still in use by Edgesite "+e1.getUuid(), HttpServletResponse.SC_CONFLICT);
+			throw new ClientErrorException("ARC-2004: This Region is still in use by Edgesite "+e1.getUuid(), HttpServletResponse.SC_CONFLICT);
 		}
 		try {
 			DB db = DBFactory.getDB();

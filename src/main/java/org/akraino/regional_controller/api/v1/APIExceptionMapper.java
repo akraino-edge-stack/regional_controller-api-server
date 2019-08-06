@@ -30,10 +30,21 @@ public class APIExceptionMapper implements ExceptionMapper<WebApplicationExcepti
 	@Override
 	public Response toResponse(WebApplicationException ex) {
 		Response r = ex.getResponse();
+		String msg = ex.getMessage();
+		String errid = "ARC-9999";
+		int ix = msg.indexOf(':');
+		if (ix > 0) {
+			errid = msg.substring(0, ix).trim();
+			msg = msg.substring(ix+1).trim();
+		}
+		String url = String.format("/docs/errors.html#%s", errid.toLowerCase());
 		JSONObject jo = new JSONObject();
 		jo.put("code", r.getStatus());
-		jo.put("message", ex.getMessage());
-		return Response.status(r.getStatus())
+		jo.put("errorId", errid);
+		jo.put("message", msg);
+		jo.put("errorUrl", url);
+		return Response
+			.status(r.getStatus())
 			.entity(jo.toString())
 			.type(MediaType.APPLICATION_JSON).
 			build();

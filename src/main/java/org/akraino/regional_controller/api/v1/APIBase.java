@@ -30,6 +30,7 @@ import org.akraino.regional_controller.db.DBFactory;
 import org.akraino.regional_controller.utils.YAMLtoJSON;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class APIBase {
@@ -55,18 +56,18 @@ public class APIBase {
 	protected User checkToken(String token, String method, String realIp) {
 		if (token == null || "".equals(token)) {
 			api_logger.info("{} user {}, realip {} => 401", method, null, realIp);
-			throw new NotAuthorizedException("not authorized");
+			throw new NotAuthorizedException("ARC-4007: not authorized");
 		}
 		DB db = DBFactory.getDB();
 		UserSession us = db.getSession(token);
 		if (us == null) {
 			api_logger.info("{} user {}, realip {} => 401", method, null, realIp);
-			throw new NotAuthorizedException("not authorized");
+			throw new NotAuthorizedException("ARC-4007: not authorized");
 		}
 		if (!us.isValid()) {
 			us.invalidate();
 			api_logger.info("{} user {}, realip {} => 401", method, null, realIp);
-			throw new NotAuthorizedException("session expired");
+			throw new NotAuthorizedException("ARC-4008: session expired");
 		}
 		return us.getUser();
 	}
@@ -86,7 +87,7 @@ public class APIBase {
 			}
 		}
 		api_logger.info("{} user {}, realip {} => 401", method, null, realIp);
-		throw new ForbiddenException("RBAC does not allow");
+		throw new ForbiddenException("ARC-3021: RBAC does not allow");
 	}
 
 	/**
@@ -96,7 +97,7 @@ public class APIBase {
 	 * @return a JSONObject of the content
 	 * @throws ClientErrorException a 415 response if the content-type header is not acceptable
 	 */
-	protected JSONObject getContent(String ctype, String content) {
+	protected JSONObject getContent(String ctype, String content) throws JSONException {
 		if (ctype.equalsIgnoreCase(APPLICATION_YAML)) {
 			logger.info("get YAML; content is {}", content);
 			YAMLtoJSON y = new YAMLtoJSON(content);
@@ -107,6 +108,6 @@ public class APIBase {
 		if (ctype.equalsIgnoreCase(MediaType.APPLICATION_JSON)) {
 			return new JSONObject(content);
 		}
-		throw new ClientErrorException(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
+		throw new ClientErrorException("ARC-2007: unsupported media type", HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
 	}
 }

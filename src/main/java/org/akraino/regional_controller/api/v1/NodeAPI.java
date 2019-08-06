@@ -77,7 +77,7 @@ public class NodeAPI extends APIBase {
 			return Response.created(new URI(url)).build();
 		} catch (URISyntaxException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -149,11 +149,11 @@ public class NodeAPI extends APIBase {
 		checkRBAC(u, NODE_READ_RBAC, method, realIp);
 
 		if (uuid == null || "".equals(uuid)) {
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Node n = Node.getNodeByUUID(uuid);
 		if (n == null) {
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		return n.toJSON();
 	}
@@ -175,7 +175,7 @@ public class NodeAPI extends APIBase {
 		Node n = Node.getNodeByUUID(uuid);
 		if (n == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		try {
@@ -183,7 +183,7 @@ public class NodeAPI extends APIBase {
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
 			if (keys.contains(Node.UUID_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the Node's UUID.");
+				throw new ForbiddenException("ARC-3008: Not allowed to modify the Node's UUID.");
 			}
 			boolean doupdate = false;
 			if (keys.contains(Node.NAME_TAG)) {
@@ -205,7 +205,7 @@ public class NodeAPI extends APIBase {
 				// Make sure this Node is not in use
 				for (Edgesite es : Edgesite.getEdgesites()) {
 					if (es.getNodes().contains(uuid)) {
-						throw new ForbiddenException("Not allowed to modify the YAML for a Node that is in use.");
+						throw new ForbiddenException("ARC-3020: Not allowed to modify the YAML for a Node that is in use.");
 					}
 				}
 				n.setYaml(yaml.toString());
@@ -217,7 +217,7 @@ public class NodeAPI extends APIBase {
 			return Response.ok().build();
 		} catch (JSONException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -233,25 +233,25 @@ public class NodeAPI extends APIBase {
 		checkRBAC(u, NODE_DELETE_RBAC, method, realIp);
 
 		if (uuid == null || "".equals(uuid)) {
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Node n = Node.getNodeByUUID(uuid);
-	  if (n == null) {
-		  throw new NotFoundException();
-	  }
-	  // Check if Node is in use (any Edgesites have Node == uuid), if so send a 409
-	  for (Edgesite e : Edgesite.getEdgesites()) {
-		  if (e.getNodes().contains(n.getUuid())) {
-			  throw new ClientErrorException("This Node is still in use by Edgesite "+e.getUuid(), HttpServletResponse.SC_CONFLICT);
-		  }
-	  }
-	  try {
-		  DB db = DBFactory.getDB();
-		  db.deleteNode(n);
-		  return Response.noContent().build();
-	  } catch (SQLException e) {
-		  return Response.serverError().build();
-	  }
+		if (n == null) {
+			throw new NotFoundException("ARC-4001: object not found");
+		}
+		// Check if Node is in use (any Edgesites have Node == uuid), if so send a 409
+		for (Edgesite e : Edgesite.getEdgesites()) {
+			if (e.getNodes().contains(n.getUuid())) {
+				throw new ClientErrorException("ARC-2003: This Node is still in use by Edgesite "+e.getUuid(), HttpServletResponse.SC_CONFLICT);
+			}
+		}
+		try {
+			DB db = DBFactory.getDB();
+			db.deleteNode(n);
+			return Response.noContent().build();
+		} catch (SQLException e) {
+			return Response.serverError().build();
+		}
 	}
 
 	private String buildUrl(String uuid) {

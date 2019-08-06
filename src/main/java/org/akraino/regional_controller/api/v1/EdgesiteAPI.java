@@ -84,10 +84,10 @@ public class EdgesiteAPI extends APIBase {
 					.build();
 			} catch (URISyntaxException e) {
 				logger.warn(e.toString());
-				throw new BadRequestException(e.toString());
+				throw new BadRequestException("ARC-1030: "+e.toString());
 			}
 		} catch (JSONException e) {
-			throw new BadRequestException("Invalid JSON object");
+			throw new BadRequestException("ARC-1002: Invalid JSON object: "+e);
 		}
 	}
 
@@ -159,11 +159,11 @@ public class EdgesiteAPI extends APIBase {
 		checkRBAC(u, EDGESITE_READ_RBAC, method, realIp);
 
 		if (uuid == null || "".equals(uuid)) {
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Edgesite e = Edgesite.getEdgesiteByUUID(uuid);
 		if (e == null) {
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		return e.toJSON();
 	}
@@ -184,7 +184,7 @@ public class EdgesiteAPI extends APIBase {
 		Edgesite es = Edgesite.getEdgesiteByUUID(uuid);
 		if (es == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		try {
@@ -192,7 +192,7 @@ public class EdgesiteAPI extends APIBase {
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
 			if (keys.contains(Edgesite.UUID_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the Edgesite's UUID.");
+				throw new ForbiddenException("ARC-3006: Not allowed to modify the Edgesite's UUID.");
 			}
 			boolean doupdate = false;
 			if (keys.contains(Edgesite.NAME_TAG)) {
@@ -215,7 +215,7 @@ public class EdgesiteAPI extends APIBase {
 				JSONArray nodes = jo.getJSONArray(Edgesite.NODES_TAG);
 				if (nodes == null || nodes.length() == 0) {
 					logger.warn("No nodes listed in JSON");
-					throw new BadRequestException("No nodes listed in JSON");
+					throw new BadRequestException("ARC-1019: No nodes listed in JSON");
 				}
 				nset = new TreeSet<>();
 				for (int i = 0; i < nodes.length(); i++) {
@@ -223,12 +223,12 @@ public class EdgesiteAPI extends APIBase {
 					Node node = Node.getNodeByUUID(nodeid);
 					if (node == null) {
 						logger.warn("Invalid Node UUID="+nodeid);
-						throw new BadRequestException("Invalid Node uuid "+nodeid);
+						throw new BadRequestException("ARC-1003: Invalid Node UUID "+nodeid);
 					}
 					Edgesite es2 = node.getEdgesite();
 					if (es2 != null && !es2.getUuid().equals(es.getUuid())) {
 						logger.warn("Node is already a member of EdgeSite "+es2.getUuid());
-						throw new BadRequestException("Node is already a member of EdgeSite "+es2.getUuid());
+						throw new BadRequestException("ARC-1020: Node is already a member of EdgeSite "+es2.getUuid());
 					}
 					nset.add(nodeid);
 				}
@@ -249,7 +249,7 @@ public class EdgesiteAPI extends APIBase {
 					Region reg = Region.getRegionByUUID(regionid);
 					if (reg == null) {
 						logger.warn("Invalid Region UUID "+regionid);
-						throw new BadRequestException("Invalid Region UUID "+regionid);
+						throw new BadRequestException("ARC-1004: Invalid Region UUID "+regionid);
 					}
 					rset.add(regionid);
 				}
@@ -268,7 +268,7 @@ public class EdgesiteAPI extends APIBase {
 			return Response.ok().build();
 		} catch (JSONException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1002: Invalid JSON object: "+e);
 		}
 	}
 
@@ -285,19 +285,19 @@ public class EdgesiteAPI extends APIBase {
 
 		if (uuid == null || "".equals(uuid)) {
 			api_logger.info("{} user {}, realip {} => 400", method, u.getName(), realIp);
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		Edgesite e = Edgesite.getEdgesiteByUUID(uuid);
 		if (e == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		// Check if Edgesite is in use (any PODs have edgesite == uuid), if so send a 409
 		POD p = e.getPOD();
 		if (p != null) {
 			if (p.getState() != POD.State.DEAD) {
 				api_logger.info("{} user {}, realip {} => 409", method, u.getName(), realIp);
-				throw new ClientErrorException("This Edgesite is still in use by POD "+p.getUuid(), HttpServletResponse.SC_CONFLICT);
+				throw new ClientErrorException("ARC-2002: This Edgesite is still in use by POD "+p.getUuid(), HttpServletResponse.SC_CONFLICT);
 			}
 			// You can delete an Edgesite if it is being used by a DEAD POD
 			// (the POD state changes to ZOMBIE)

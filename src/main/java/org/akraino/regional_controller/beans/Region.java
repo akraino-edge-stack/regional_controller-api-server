@@ -60,7 +60,7 @@ public class Region extends BaseBean {
 			} else {
 				// Use the UUID provided
 				if (getRegionByUUID(uuid) != null) {
-					throw new BadRequestException("UUID "+uuid+" is already in use.");
+					throw new BadRequestException("ARC-1027: UUID "+uuid+" is already in use.");
 				}
 			}
 			Region r = new Region(uuid, n, d, p);
@@ -89,7 +89,7 @@ public class Region extends BaseBean {
 			DB db = DBFactory.getDB();
 			db.updateRegion(this);
 		} catch (SQLException e1) {
-			throw new InternalServerErrorException(e1.getMessage());
+			throw new InternalServerErrorException("ARC-4003: "+e1.getMessage());
 		}
 	}
 

@@ -48,6 +48,13 @@ API Documentation
 
    api
 
+List of API Error Codes
+-----------------------
+.. toctree::
+   :maxdepth: 1
+
+   errors
+
 An Example Use of the API
 -------------------------
 .. toctree::

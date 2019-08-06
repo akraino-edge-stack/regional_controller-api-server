@@ -74,7 +74,7 @@ public class UserAPI extends APIBase {
 			return Response.created(new URI(url)).build();
 		} catch (URISyntaxException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -147,7 +147,7 @@ public class UserAPI extends APIBase {
 		User bp = User.getUserByUUID(uuid);
 		if (bp == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		api_logger.info("{} user {}, realip {} => 200", method, u.getName(), realIp);
 		return bp.toJSON();
@@ -170,7 +170,7 @@ public class UserAPI extends APIBase {
 		User user = User.getUserByUUID(uuid);
 		if (user == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		try {
@@ -178,10 +178,10 @@ public class UserAPI extends APIBase {
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
 			if (keys.contains(User.UUID_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the User's UUID.");
+				throw new ForbiddenException("ARC-3017: Not allowed to modify the User's UUID.");
 			}
 			if (keys.contains(User.NAME_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the User's name.");
+				throw new ForbiddenException("ARC-3018: Not allowed to modify the User's name.");
 			}
 			boolean doupdate = false;
 			if (keys.contains(User.PASSWORD_TAG)) {
@@ -189,7 +189,7 @@ public class UserAPI extends APIBase {
 				if (! pw.matches(User.HI_STRENGTH_RE)) {
 					String m = "Password is not strong enough; must match the regex: "+User.HI_STRENGTH_RE;
 					logger.warn(m);
-					throw new BadRequestException(m);
+					throw new BadRequestException("ARC-1030: "+m);
 				}
 				user.setPassword(pw);
 				doupdate = true;
@@ -212,7 +212,7 @@ public class UserAPI extends APIBase {
 						newroles.add(r);
 					} else {
 						logger.warn("The requesting user does not possess the role: "+r);
-						throw new BadRequestException("The requesting user does not possess the role: "+r);
+						throw new BadRequestException("ARC-1023: The requesting user does not possess the role: "+r);
 					}
 				}
 				user.setRoles(newroles);
@@ -224,7 +224,7 @@ public class UserAPI extends APIBase {
 			return Response.ok().build();
 		} catch (JSONException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -241,12 +241,12 @@ public class UserAPI extends APIBase {
 
 		if (uuid == null || "".equals(uuid)) {
 			api_logger.info("{} user {}, realip {} => 400", method, u.getName(), realIp);
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		User b = User.getUserByUUID(uuid);
 		if (b == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		try {
 			DB db = DBFactory.getDB();

@@ -76,12 +76,12 @@ public class PODWorkflow extends BaseBean {
 
 	@Override
 	public void setName(String name) {
-		throw new IllegalArgumentException("Cannot change the name of a PODWorkflow.");
+		throw new IllegalArgumentException("ARC-4011: Cannot change the name of a PODWorkflow.");
 	}
 
 	@Override
 	public void setDescription(String description) {
-		throw new IllegalArgumentException("Cannot change the description of a PODWorkflow.");
+		throw new IllegalArgumentException("ARC-4002: Cannot change the description of a PODWorkflow.");
 	}
 
 	public int getIndex() {

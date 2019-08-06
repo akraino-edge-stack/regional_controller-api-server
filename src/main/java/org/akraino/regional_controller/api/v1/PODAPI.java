@@ -79,13 +79,13 @@ public class PODAPI extends APIBase {
 			if (blueprint == null || "".equals(blueprint)) {
 				String msg = "Missing Blueprint UUID";
 				logger.warn(msg);
-				throw new BadRequestException(msg);
+				throw new BadRequestException("ARC-1030: "+msg);
 			}
 			Blueprint bp = Blueprint.getBlueprintByUUID(blueprint);
 			if (bp == null) {
 				String msg = "No blueprint with UUID="+blueprint;
 				logger.warn(msg);
-				throw new BadRequestException(msg);
+				throw new BadRequestException("ARC-1030: "+msg);
 			}
 
 			// 2. Verify Edgesite is valid and not in use
@@ -93,29 +93,29 @@ public class PODAPI extends APIBase {
 			if (edgesite == null || "".equals(edgesite)) {
 				String msg = "Missing Edgesite UUID";
 				logger.warn(msg);
-				throw new BadRequestException(msg);
+				throw new BadRequestException("ARC-1030: "+msg);
 			}
-			Edgesite e = Edgesite.getEdgesiteByUUID(edgesite);
-			if (e == null) {
+			Edgesite es = Edgesite.getEdgesiteByUUID(edgesite);
+			if (es == null) {
 				String msg = "No Edgesite with UUID="+edgesite;
 				logger.warn(msg);
-				throw new NotFoundException(msg);
+				throw new NotFoundException("ARC-4001: "+msg);
 			}
-			POD oldpod = e.getPOD();
+			POD oldpod = es.getPOD();
 			if (oldpod != null) {
 				if (oldpod.getState() == POD.State.DEAD) {
 					// This Edgesite is being repurposed, so set the old POD to ZOMBIE
 					oldpod.setState(POD.State.ZOMBIE);
 				}
 				if (oldpod.getState() != POD.State.ZOMBIE) {
-					String msg = "The Edgesite "+edgesite+" is already in use by POD "+e.getPOD().getUuid();
+					String msg = "The Edgesite "+edgesite+" is already in use by POD "+es.getPOD().getUuid();
 					logger.warn(msg);
-					throw new BadRequestException(msg);
+					throw new BadRequestException("ARC-1030: "+msg);
 				}
 			}
 
 			// 3. Verify that the Blueprint hardware profile allows deployment on this Edgesite
-			List<String> errors = bp.isCompatibleHardware(e);
+			List<String> errors = bp.isCompatibleHardware(es);
 			if (! errors.isEmpty()) {
 				String msg = "The Edgesite "+edgesite+" is not hardware compatible with the Blueprint "+blueprint;
 				logger.warn(msg);
@@ -123,7 +123,7 @@ public class PODAPI extends APIBase {
 					msg = msg + "\n" + s;
 					logger.warn(s);
 				}
-				throw new BadRequestException(msg);
+				throw new BadRequestException("ARC-1030: "+msg);
 			}
 
 			// 4. Verify that all data required from input schema in the Blueprint is in the uploaded file
@@ -135,7 +135,7 @@ public class PODAPI extends APIBase {
 					msg = msg + "\n" + s;
 					logger.warn(s);
 				}
-				throw new BadRequestException(msg);
+				throw new BadRequestException("ARC-1030: "+msg);
 			}
 
 			// 5. Check that there is a "create" workflow in the Blueprint
@@ -143,7 +143,7 @@ public class PODAPI extends APIBase {
 			if (create_wf == null) {
 				String msg = "There is no 'create' workflow in the Blueprint "+blueprint;
 				logger.warn(msg);
-				throw new BadRequestException(msg);
+				throw new BadRequestException("ARC-1030: "+msg);
 			}
 
 			// 6. If a dry run, then we are done!
@@ -166,18 +166,18 @@ public class PODAPI extends APIBase {
 				if (!p.startWorkFlow(pwf)) {
 					String msg = "Could not start workflow "+Blueprint.WF_CREATE+" for POD "+p.getUuid();
 					logger.error(msg);
-					throw new BadRequestException(msg);
+					throw new BadRequestException("ARC-1030: "+msg);
 				}
 
 				return Response.created(new URI("/api/v1/pod/"+uuid))
 					.build();
-			} catch (URISyntaxException ex) {
-				logger.warn(ex.toString());
-				throw new BadRequestException(ex.toString());
+			} catch (URISyntaxException e) {
+				logger.warn(e.toString());
+				throw new BadRequestException("ARC-1030: "+e.toString());
 			}
 		} catch (JSONException e) {
 			logger.warn("Invalid JSON object: "+e);
-			throw new BadRequestException("createPOD: Invalid JSON object: "+e);
+			throw new BadRequestException("ARC-1002: Invalid JSON object: "+e);
 		}
 	}
 
@@ -248,11 +248,11 @@ public class PODAPI extends APIBase {
 		checkRBAC(u, POD_READ_RBAC, method, realIp);
 
 		if (uuid == null || "".equals(uuid)) {
-			throw new BadRequestException("bad uuid");
+			throw new BadRequestException("ARC-1028: bad UUID");
 		}
 		POD p = POD.getPodByUUID(uuid);
 		if (p == null) {
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 		JSONObject jo = p.toJSON();
 		jo.put("url", "/api/v1/pod/" + jo.get("uuid"));
@@ -281,7 +281,7 @@ public class PODAPI extends APIBase {
 		POD p = POD.getPodByUUID(uuid);
 		if (p == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		try {
@@ -289,22 +289,22 @@ public class PODAPI extends APIBase {
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
 			if (keys.contains(POD.UUID_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the POD's UUID.");
+				throw new ForbiddenException("ARC-3009: Not allowed to modify the POD's UUID.");
 			}
 			if (keys.contains(POD.NAME_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the POD's name.");
+				throw new ForbiddenException("ARC-3013: Not allowed to modify the POD's name.");
 			}
 			if (keys.contains(POD.STATE_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the POD's state.");
+				throw new ForbiddenException("ARC-3014: Not allowed to modify the POD's state.");
 			}
 			if (keys.contains(POD.BLUEPRINT_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the POD's blueprint.");
+				throw new ForbiddenException("ARC-3011: Not allowed to modify the POD's blueprint.");
 			}
 			if (keys.contains(POD.EDGESITE_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the POD's edgesite.");
+				throw new ForbiddenException("ARC-3012: Not allowed to modify the POD's edgesite.");
 			}
 			if (keys.contains(POD.YAML_TAG)) {
-				throw new ForbiddenException("Not allowed to modify the POD's YAML.");
+				throw new ForbiddenException("ARC-3010: Not allowed to modify the POD's YAML.");
 			}
 			if (keys.contains(POD.DESCRIPTION_TAG)) {
 				String description = jo.getString(POD.DESCRIPTION_TAG);
@@ -316,7 +316,7 @@ public class PODAPI extends APIBase {
 			return Response.ok().build();
 		} catch (JSONException e) {
 			logger.warn(e.toString());
-			throw new BadRequestException(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
 		}
 	}
 
@@ -365,12 +365,12 @@ public class PODAPI extends APIBase {
 		POD p = POD.getPodByUUID(uuid);
 		if (p == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		// 2. Verify the user is not trying to run "create" or "delete" workflow
 		if (wfname.equals(Blueprint.WF_CREATE) || wfname.equals(Blueprint.WF_DELETE)) {
-			throw new NotAllowedException("You cannot run the "+wfname+" workflow via this API call.");
+			throw new NotAllowedException("ARC-4006: You cannot run the "+wfname+" workflow via this API call.");
 		}
 
 		// 2b. Check that there is a "wfname" workflow in the Blueprint
@@ -378,15 +378,15 @@ public class PODAPI extends APIBase {
 		JSONObject wf = bp.getObjectStanza("workflow/"+wfname);
 		if (wf == null) {
 			// No such workflow, error
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		// 3. Verify the POD is alive and not running a workflow
 		if (!p.isAlive()) {
-			throw new NotAllowedException("POD is not alive.");
+			throw new NotAllowedException("ARC-4005: POD is not alive.");
 		}
 		if (p.isWorkflowRunning()) {
-			throw new NotAllowedException("A workflow is currently running on the POD.");
+			throw new NotAllowedException("ARC-4004: A workflow is currently running on the POD.");
 		}
 
 		// 4. Verify that all data required from input schema in the Blueprint is in the uploaded file
@@ -399,7 +399,7 @@ public class PODAPI extends APIBase {
 				msg = msg + "\n" + s;
 				logger.warn(s);
 			}
-			throw new BadRequestException(msg);
+			throw new BadRequestException("ARC-1030: "+msg);
 		}
 
 		// 5. If a dry run, then we are done!
@@ -415,7 +415,7 @@ public class PODAPI extends APIBase {
 		if (!p.startWorkFlow(pwf)) {
 			String msg = "Could not start workflow "+wfname+" for POD "+p.getUuid();
 			logger.error(msg);
-			throw new BadRequestException(msg);
+			throw new BadRequestException("ARC-1030: "+msg);
 		}
 
 		// Success
@@ -453,7 +453,7 @@ public class PODAPI extends APIBase {
 		POD p = POD.getPodByUUID(uuid);
 		if (p == null) {
 			api_logger.info("{} user {}, realip {} => 404", method, u.getName(), realIp);
-			throw new NotFoundException();
+			throw new NotFoundException("ARC-4001: object not found");
 		}
 
 		// If user requests that the delete be forced, delete immediately, without a workflow
@@ -464,10 +464,10 @@ public class PODAPI extends APIBase {
 
 		// verify POD is in a state that can be deleted
 		if (!p.isAlive()) {
-			throw new NotAllowedException("POD is not alive.");
+			throw new NotAllowedException("ARC-4005: POD is not alive.");
 		}
 		if (p.isWorkflowRunning()) {
-			throw new NotAllowedException("A workflow is currently running on the POD.");
+			throw new NotAllowedException("ARC-4004: A workflow is currently running on the POD.");
 		}
 
 		// Check that there is a "delete" workflow in the Blueprint
@@ -486,7 +486,7 @@ public class PODAPI extends APIBase {
 		if (!p.startWorkFlow(pwf)) {
 			String msg = "Could not start workflow "+Blueprint.WF_DELETE+" for POD "+p.getUuid();
 			logger.error(msg);
-			throw new BadRequestException(msg);
+			throw new BadRequestException("ARC-1030: "+msg);
 		}
 
 		// Return 202 - Accepted

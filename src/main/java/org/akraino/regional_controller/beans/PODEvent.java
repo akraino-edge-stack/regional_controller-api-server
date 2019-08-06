@@ -37,17 +37,17 @@ public class PODEvent {
 	public static PODEvent createPodEvent(JSONObject json) throws WebApplicationException {
 		String u = json.optString("uuid");
 		if (u == null || "".equals(u))
-			throw new BadRequestException("Missing UUID");
+			throw new BadRequestException("ARC-1007: Missing UUID");
 		String t = json.optString("time");
 		String l = json.optString("level");
 		if (l == null || "".equals(l))
-			throw new BadRequestException("Missing level");
+			throw new BadRequestException("ARC-1011: Missing level");
 		String m = json.optString("message");
 		if (m == null || "".equals(m))
-			throw new BadRequestException("Missing message");
+			throw new BadRequestException("ARC-1012: Missing message");
 		POD pod = POD.getPodByUUID(u);
 		if (pod == null)
-			throw new BadRequestException("No POD with UUID="+u);
+			throw new BadRequestException("ARC-1018: No POD with UUID="+u);
 
 		try {
 			Timestamp ts;
@@ -63,7 +63,7 @@ public class PODEvent {
 			pe.writeEvent();
 			return pe;
 		} catch (ParseException e) {
-			throw new BadRequestException("Invalid timestamp: "+e);
+			throw new BadRequestException("ARC-1006: Invalid timestamp: "+e);
 		}
 	}
 
