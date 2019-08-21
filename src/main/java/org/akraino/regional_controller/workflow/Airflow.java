@@ -38,6 +38,11 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+/**
+ * The class provides the functionality required to use <a href="http://airflow.apache.org/">Apache Airflow</a>
+ * as a workflow engine for the RC.  It will place the DAGs for Airflow in the directory /dags, and the other
+ * required components in /workflow/<workflow name>
+ */
 @SuppressWarnings("unused")
 public class Airflow implements WorkFlow {
 	public static final String TEMPLATE_PYTHON = "template_python.py";
@@ -62,6 +67,9 @@ public class Airflow implements WorkFlow {
 		this.dags_directory      = props.getProperty("workflow.airflow.dags", DEFAULT_DAGS);
 		this.dag_name = null;
 		this.podwflow = null;
+
+		// Instantiate the pruner -- note: currently we do not need to keep a handle to this
+		AirflowPruner.getPruner(props, logger);
 	}
 
 	@Override
