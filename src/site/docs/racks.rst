@@ -59,11 +59,11 @@ A GUI interpreting this data will need to know how to draw the various forms of 
 based upon the *layout* value.  In this example, *airframe* would be drawn something like
 
 +--------+--------+
-| unit 4 | unit 1 |
+| unit 4 | unit 5 |
 +--------+--------+
-| unit 5 | unit 2 |
+| unit 2 | unit 3 |
 +--------+--------+
-| POWER  | unit 3 |
+| POWER  | unit 1 |
 +--------+--------+
 
 
