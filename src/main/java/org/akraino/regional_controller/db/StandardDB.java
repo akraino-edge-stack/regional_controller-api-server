@@ -586,12 +586,13 @@ public class StandardDB implements DB {
 		Connection conn = null;
 		try {
 			conn = getConnection();
-			String sql = "UPDATE AKRAINO.POD SET state = ?, yaml = ?, es_uuid = ? WHERE uuid = ?";
+			String sql = "UPDATE AKRAINO.POD SET state = ?, yaml = ?, bp_uuid = ?, es_uuid = ? WHERE uuid = ?";
 			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 				stmt.setString(1, p.getState().toString());
 				stmt.setString(2, p.getYaml());
-				stmt.setString(3, p.getEdgesite());
-				stmt.setString(4, p.getUuid());
+				stmt.setString(3, p.getBlueprint());
+				stmt.setString(4, p.getEdgesite());
+				stmt.setString(5, p.getUuid());
 				stmt.execute();
 			}
 		} catch (SQLException e) {

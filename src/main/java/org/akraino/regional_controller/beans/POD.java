@@ -142,7 +142,7 @@ public class POD extends BaseBean {
 		ZOMBIE
 	}
 
-	private final String blueprint;		// UUID of the Blueprint
+	private String blueprint;			// UUID of the Blueprint
 	private String edgesite;			// UUID of the EdgeSite
 	private State state;				// the internal state of the POD
 	private String yaml;				// extra JSON describing the POD
@@ -165,6 +165,10 @@ public class POD extends BaseBean {
 
 	public String getBlueprint() {
 		return blueprint;
+	}
+
+	public void setBlueprint(String blueprint) {
+		this.blueprint = blueprint;
 	}
 
 	public String getEdgesite() {

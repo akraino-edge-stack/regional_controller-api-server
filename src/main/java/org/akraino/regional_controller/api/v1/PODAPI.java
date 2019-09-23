@@ -285,7 +285,7 @@ public class PODAPI extends APIBase {
 		}
 
 		try {
-			// Can only change the description of a POD
+			// Can only change the description/blueprint of a POD
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
 			if (keys.contains(POD.UUID_TAG)) {
@@ -298,7 +298,18 @@ public class PODAPI extends APIBase {
 				throw new ForbiddenException("ARC-3014: Not allowed to modify the POD's state.");
 			}
 			if (keys.contains(POD.BLUEPRINT_TAG)) {
-				throw new ForbiddenException("ARC-3011: Not allowed to modify the POD's blueprint.");
+				// You are only allowed to change the Blueprint to a child Blueprint
+				// (e.g. a Blueprint derived from the one the POD is already using)
+				String child = jo.getString(POD.BLUEPRINT_TAG);
+				if (! Blueprint.isChildBlueprint(child, p.getBlueprint())) {
+					throw new ForbiddenException("ARC-3011: Not allowed to modify the POD's blueprint to a non-derived Blueprint.");
+				}
+				// Disallow if pod is state other than ACTIVE
+				if (p.getState() != POD.State.ACTIVE) {
+					throw new ForbiddenException("ARC-3023: Not allowed to modify the POD's blueprint while the POD's state is not ACTIVE.");
+				}
+				p.setBlueprint(child);
+				p.updatePod();
 			}
 			if (keys.contains(POD.EDGESITE_TAG)) {
 				throw new ForbiddenException("ARC-3012: Not allowed to modify the POD's edgesite.");

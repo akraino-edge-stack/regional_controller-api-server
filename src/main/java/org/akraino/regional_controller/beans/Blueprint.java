@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,6 +49,8 @@ public class Blueprint extends BaseBean {
 	public static final String WF_UPDATE = "update";
 	public static final String WF_DELETE = "delete";
 	public static final String WF_REGEX  = "^[a-zA-Z0-9_]{1,36}$";	// WF names must match this RE
+	public static final String PARENT_TAG = "parent";
+	public static final String HARDWARE_STANZA = "hardware_profile";
 
 	private static final Set<String> schema_set = new TreeSet<>();
 	static {
@@ -83,6 +86,15 @@ public class Blueprint extends BaseBean {
 		if (y == null) {
 			logger.warn("Missing YAML; are you sure about this Blueprint?");
 			throw new BadRequestException("ARC-1008: Missing YAML; are you sure about this Blueprint?");
+		}
+		// The parent pointer will be stored in the YAML subtree
+		String p = y.optString(PARENT_TAG);
+		if (p != null) {
+			if (p.equals("")) {
+				p = null;
+			} else if (getBlueprintByUUID(p) == null) {
+				throw new BadRequestException("ARC-1033: No parent blueprint exists with UUID "+p);
+			}
 		}
 
 		String uuid = json.optString(UUID_TAG);
@@ -147,6 +159,28 @@ public class Blueprint extends BaseBean {
 		return map;
 	}
 
+	/**
+	 * Check if the Blueprint with the UUID child, as in fact a descendant of the Blueprint with the UUID parent.
+	 * @param child the child UUID
+	 * @param parent the parent UUID
+	 * @return true if it is a descendant
+	 */
+	public static boolean isChildBlueprint(String child, String parent) {
+		Logger logger = LogManager.getLogger();
+		logger.info("child="+child + " parent="+parent);
+		Blueprint b = getBlueprintByUUID(child);
+		logger.info("getBlueprintByUUID returns "+b);
+		if (b == null)
+			return false;
+		String parent_id = b.getParent();
+		logger.info("parent_id is "+parent_id);
+		if (parent_id == null)
+			return false;
+		if (parent_id.equalsIgnoreCase(parent))
+			return true;
+		return isChildBlueprint(parent_id, parent);
+	}
+
 	private final String version;
 	private String yaml;			// extra JSON describing the Blueprint
 
@@ -160,6 +194,17 @@ public class Blueprint extends BaseBean {
 		return version;
 	}
 
+	public String getParent() {
+		if (yaml != null) {
+			YAMLtoJSON y = new YAMLtoJSON(yaml);
+			JSONObject jo = y.toJSON();
+			String parent = jo.optString(PARENT_TAG);
+			if (parent != null && parent.length() > 0)
+				return parent;
+		}
+		return null;
+	}
+
 	public String getYaml() {
 		return yaml;
 	}
@@ -169,7 +214,7 @@ public class Blueprint extends BaseBean {
 	}
 
 	/**
-	 * Return the list of PODs that are using this Blueprint.
+	 * Return the list of PODs that are using this specific Blueprint.
 	 * @return the collection (which may be empty).
 	 */
 	public List<POD> getPODs() {
@@ -183,17 +228,26 @@ public class Blueprint extends BaseBean {
 		return list;
 	}
 
-	public List<String> getWorkFlowNames() {
-		List<String> list = new ArrayList<>();
+	/**
+	 * Return a set of all the workflow names that can be executed from this Blueprint, includes parent Blueprints.
+	 * @return the set of workflow names
+	 */
+	public Set<String> getWorkFlowNames() {
+		Set<String> set = new HashSet<>();
+		String parent = getParent();
+		if (parent != null) {
+			Blueprint parentbp = getBlueprintByUUID(parent);
+			set = parentbp.getWorkFlowNames();
+		}
 		if (yaml != null) {
 			YAMLtoJSON y = new YAMLtoJSON(yaml);
 			JSONObject jo = y.toJSON();
 			jo = jo.optJSONObject("workflow");
 			if (jo != null) {
-				list.addAll(jo.keySet());
+				set.addAll(jo.keySet());
 			}
 		}
-		return list;
+		return set;
 	}
 
 	/**
@@ -211,7 +265,7 @@ public class Blueprint extends BaseBean {
 	 * @return true if compatible, false otherwise
 	 */
 	public List<String> isCompatibleHardware(Edgesite e) {
-		JSONObject jo = getObjectStanza("hardware_profile");
+		JSONObject jo = getObjectStanza(HARDWARE_STANZA);
 		if (jo == null)
 			return new ArrayList<>();
 		return matchRules(jo, e);
@@ -462,24 +516,42 @@ public class Blueprint extends BaseBean {
 		return false;
 	}
 
-	public JSONObject getObjectStanza(String path) {
-		if (yaml == null)
-			return null;
+	public JSONObject getObjectStanza(final String path) {
 		String[] pp = path.split("/");
-		YAMLtoJSON y = new YAMLtoJSON(yaml);
-		JSONObject jo = y.toJSON();
-		for (int i = 0; i < pp.length; i++) {
-			jo = jo.optJSONObject(pp[i]);
-			if (jo == null)
-				return null;
+		JSONObject jo = getStanzaCommon(pp);
+		if (jo != null) {
+			jo = jo.optJSONObject(pp[pp.length-1]);
+			if (jo != null)
+				return jo;
 		}
-		return jo;
+		String parent = getParent();
+		if (parent != null) {
+			Blueprint parentbp = getBlueprintByUUID(parent);
+			return parentbp.getObjectStanza(path);
+		}
+		return null;
 	}
 
-	public JSONArray getArrayStanza(String path) {
+	public JSONArray getArrayStanza(final String path) {
+		String[] pp = path.split("/");
+		JSONObject jo = getStanzaCommon(pp);
+		JSONArray ja = null;
+		if (jo != null) {
+			ja = jo.optJSONArray(pp[pp.length-1]);
+			if (ja != null)
+				return ja;
+		}
+		String parent = getParent();
+		if (parent != null) {
+			Blueprint parentbp = getBlueprintByUUID(parent);
+			return parentbp.getArrayStanza(path);
+		}
+		return null;
+	}
+
+	private JSONObject getStanzaCommon(String[] pp) {
 		if (yaml == null)
 			return null;
-		String[] pp = path.split("/");
 		YAMLtoJSON y = new YAMLtoJSON(yaml);
 		JSONObject jo = y.toJSON();
 		for (int i = 0; i < pp.length-1; i++) {
@@ -487,7 +559,7 @@ public class Blueprint extends BaseBean {
 			if (jo == null)
 				return null;
 		}
-		return jo.optJSONArray(pp[pp.length-1]);
+		return jo;
 	}
 
 	@Override

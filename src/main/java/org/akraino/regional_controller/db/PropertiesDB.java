@@ -42,6 +42,7 @@ import org.akraino.regional_controller.beans.Role;
 import org.akraino.regional_controller.beans.User;
 import org.akraino.regional_controller.beans.UserSession;
 import org.akraino.regional_controller.utils.JSONtoYAML;
+import org.akraino.regional_controller.utils.YAMLtoJSON;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -81,7 +82,8 @@ public class PropertiesDB implements DB {
 	@Override
 	public void createBlueprint(final Blueprint b) throws SQLException {
 		String key = nextKey(BLUEPRINT_PROPERTY);
-		String value = b.getUuid() + "," + b.getName() + "," + b.getDescription() + "," + b.getVersion() + "," + b.getYaml();
+		String json = new YAMLtoJSON(b.getYaml()).toJSON().toString();
+		String value = b.getUuid() + "," + b.getName() + "," + b.getDescription() + "," + b.getVersion() + "," + json;
 		props.setProperty(key, value);
 	}
 

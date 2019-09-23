@@ -198,6 +198,12 @@ ARC-1032
 When creating a User, an invalid password was detected.  Passwords must contain
 alphanumerics, spaces or dashes, and be a minimum of 22 characters long.
 
+ARC-1033
+--------
+
+When creating a Blueprint, the new Blueprint referenced a parent Blueprint that is not in
+the system.  Make sure all parent Blueprints are loaded into the system first.
+
 ARC-2001
 --------
 
@@ -357,6 +363,13 @@ ARC-3022
 
 You are not allowed to make the parent of a region be itself.
 Only the universal region may have itself as its parent.
+
+ARC-3023
+--------
+
+You are not allowed to modify the Blueprint of a POD, if the POD is not in the ACTIVE
+state.  PODs in any other state are either terminal, or in transition.
+
 
 ARC-4001
 --------

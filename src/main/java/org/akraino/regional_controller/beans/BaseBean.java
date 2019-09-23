@@ -32,7 +32,7 @@ public class BaseBean {
 	private String description;
 
 	protected BaseBean(String uuid, String name, String description) {
-		this.uuid = uuid;
+		this.uuid = uuid.toLowerCase();
 		this.name = name;
 		this.description = description;
 	}
