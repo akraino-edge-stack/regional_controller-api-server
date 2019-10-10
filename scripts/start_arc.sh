@@ -147,6 +147,7 @@ docker run --detach --name "${PREFIX}-airflow-postgres" \
 	# volumes:
 	#     - ./pgdata:/var/lib/postgresql/data/pgdata
 
+# Note: set LOGGING_USER/LOGGING_PASSWORD if you change the login for logging pod events
 COMMON="
 	--restart=always
 	--env LOAD_EX=n
@@ -158,6 +159,8 @@ COMMON="
 	--env POSTGRES_DB=airflow
 	--env REDIS_HOST=${PREFIX}-airflow-redis
 	--env REDIS_PASSWORD=${PW}
+	--env LOGGING_USER=workflow
+	--env LOGGING_PASSWORD=admin123
 	--volume ${DROOT}/dags:/usr/local/airflow/dags
 	--volume ${DROOT}/workflow:/workflow
 	--volume ${DROOT}/init/airflow.cfg:/usr/local/airflow/airflow.cfg
