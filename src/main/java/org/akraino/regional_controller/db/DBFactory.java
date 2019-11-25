@@ -85,27 +85,27 @@ public class DBFactory {
 	public static void main(String[] a) {
 		DB db = DBFactory.getDB();
 		if (db == null) {
-			System.err.println("Cannot get DB!");
+			DBFactory.logger.error("Cannot get DB!");
 			System.exit(1);
 		}
 		for (Blueprint bp : db.getBlueprints()) {
-			System.out.println(bp);
+			DBFactory.logger.info(bp);
 		}
-		System.out.println();
+		DBFactory.logger.info("");
 		for (Edgesite e : db.getEdgesites()) {
-			System.out.println(e);
+			DBFactory.logger.info(e);
 		}
-		System.out.println();
+		DBFactory.logger.info("");
 		for (Node n : db.getNodes()) {
-			System.out.println(n);
+			DBFactory.logger.info(n);
 		}
-		System.out.println();
+		DBFactory.logger.info("");
 		for (Region r : db.getRegions()) {
-			System.out.println(r);
+			DBFactory.logger.info(r);
 		}
-		System.out.println();
-		System.out.println(db.getUser("admin"));
+		DBFactory.logger.info("");
+		DBFactory.logger.info(db.getUser("admin"));
 
-		System.out.println(System.currentTimeMillis());
-}
+		DBFactory.logger.info(System.currentTimeMillis());
+	}
 }

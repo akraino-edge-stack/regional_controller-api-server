@@ -139,11 +139,6 @@ public class AirflowPruner extends TimerTask {
 		pr.setProperty("workflow.airflow.dags",      "/data" + Airflow.DEFAULT_DAGS);
 		pr.setProperty("workflow.airflow.url",       "http://mtmac2.research.att.com:8080");
 		new AirflowPruner(pr);
-		try {
-			Thread.sleep(5000L);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		Thread.sleep(5000L);
 	}
 }

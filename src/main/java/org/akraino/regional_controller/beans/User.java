@@ -40,7 +40,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class User extends BaseBean {
-	public static final String PASSWORD_TAG = "password";
+	public static final String CREDENTIALS_TAG = "password";
 	public static final String ROLES_TAG    = "roles";
 
 	// 22 alphanumeric chars = 128 bits of entropy
@@ -58,7 +58,7 @@ public class User extends BaseBean {
 		if (d == null) {
 			d = "";
 		}
-		String pw = json.optString(PASSWORD_TAG);
+		String pw = json.optString(CREDENTIALS_TAG);
 		if (pw == null || "".equals(pw)) {
 			logger.warn("Missing version");
 			throw new BadRequestException("ARC-1014: Missing password");

@@ -40,6 +40,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.akraino.regional_controller.beans.BaseBean;
 import org.akraino.regional_controller.beans.Edgesite;
 import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.POD;
@@ -191,19 +192,19 @@ public class EdgesiteAPI extends APIBase {
 			// Can only change the name & description of the Edgesite
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
-			if (keys.contains(Edgesite.UUID_TAG)) {
+			if (keys.contains(BaseBean.UUID_TAG)) {
 				throw new ForbiddenException("ARC-3006: Not allowed to modify the Edgesite's UUID.");
 			}
 			boolean doupdate = false;
-			if (keys.contains(Edgesite.NAME_TAG)) {
-				String name = jo.getString(Edgesite.NAME_TAG);
+			if (keys.contains(BaseBean.NAME_TAG)) {
+				String name = jo.getString(BaseBean.NAME_TAG);
 				if (!name.equals(es.getName())) {
 					es.setName(name);
 					doupdate = true;
 				}
 			}
-			if (keys.contains(Edgesite.DESCRIPTION_TAG)) {
-				String description = jo.getString(Edgesite.DESCRIPTION_TAG);
+			if (keys.contains(BaseBean.DESCRIPTION_TAG)) {
+				String description = jo.getString(BaseBean.DESCRIPTION_TAG);
 				if (!description.equals(es.getDescription())) {
 					es.setDescription(description);
 					doupdate = true;

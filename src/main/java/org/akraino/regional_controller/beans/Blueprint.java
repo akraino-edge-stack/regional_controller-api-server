@@ -89,10 +89,8 @@ public class Blueprint extends BaseBean {
 		}
 		// The parent pointer will be stored in the YAML subtree
 		String p = y.optString(PARENT_TAG);
-		if (p != null) {
-			if (p.equals("")) {
-				p = null;
-			} else if (getBlueprintByUUID(p) == null) {
+		if (p != null && !p.equals("")) {
+			if (getBlueprintByUUID(p) == null) {
 				throw new BadRequestException("ARC-1033: No parent blueprint exists with UUID "+p);
 			}
 		}

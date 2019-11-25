@@ -39,6 +39,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.akraino.regional_controller.beans.BaseBean;
 import org.akraino.regional_controller.beans.Edgesite;
 import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.User;
@@ -182,26 +183,26 @@ public class NodeAPI extends APIBase {
 			// Can only change the name, description & YAML of the Node
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
-			if (keys.contains(Node.UUID_TAG)) {
+			if (keys.contains(BaseBean.UUID_TAG)) {
 				throw new ForbiddenException("ARC-3008: Not allowed to modify the Node's UUID.");
 			}
 			boolean doupdate = false;
-			if (keys.contains(Node.NAME_TAG)) {
-				String name = jo.getString(Node.NAME_TAG);
+			if (keys.contains(BaseBean.NAME_TAG)) {
+				String name = jo.getString(BaseBean.NAME_TAG);
 				if (!name.equals(n.getName())) {
 					n.setName(name);
 					doupdate = true;
 				}
 			}
-			if (keys.contains(Node.DESCRIPTION_TAG)) {
-				String description = jo.getString(Node.DESCRIPTION_TAG);
+			if (keys.contains(BaseBean.DESCRIPTION_TAG)) {
+				String description = jo.getString(BaseBean.DESCRIPTION_TAG);
 				if (!description.equals(n.getDescription())) {
 					n.setDescription(description);
 					doupdate = true;
 				}
 			}
-			if (keys.contains(Node.YAML_TAG)) {
-				JSONObject yaml = jo.getJSONObject(Node.YAML_TAG);
+			if (keys.contains(BaseBean.YAML_TAG)) {
+				JSONObject yaml = jo.getJSONObject(BaseBean.YAML_TAG);
 				// Make sure this Node is not in use
 				for (Edgesite es : Edgesite.getEdgesites()) {
 					if (es.getNodes().contains(uuid)) {

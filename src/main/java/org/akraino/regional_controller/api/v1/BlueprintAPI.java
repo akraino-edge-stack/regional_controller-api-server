@@ -39,6 +39,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.akraino.regional_controller.beans.BaseBean;
 import org.akraino.regional_controller.beans.Blueprint;
 import org.akraino.regional_controller.beans.POD;
 import org.akraino.regional_controller.beans.User;
@@ -184,20 +185,20 @@ public class BlueprintAPI extends APIBase {
 			// Can only change the description of the Blueprint
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
-			if (keys.contains(Blueprint.UUID_TAG)) {
+			if (keys.contains(BaseBean.UUID_TAG)) {
 				throw new ForbiddenException("ARC-3002: Not allowed to modify the Blueprint's UUID.");
 			}
-			if (keys.contains(Blueprint.NAME_TAG)) {
+			if (keys.contains(BaseBean.NAME_TAG)) {
 				throw new ForbiddenException("ARC-3004: Not allowed to modify the Blueprint's name.");
 			}
-			if (keys.contains(Blueprint.VERSION_TAG)) {
+			if (keys.contains(BaseBean.VERSION_TAG)) {
 				throw new ForbiddenException("ARC-3005: Not allowed to modify the Blueprint's version.");
 			}
-			if (keys.contains(Blueprint.YAML_TAG)) {
+			if (keys.contains(BaseBean.YAML_TAG)) {
 				throw new ForbiddenException("ARC-3003: Not allowed to modify the Blueprint's YAML.");
 			}
-			if (keys.contains(Blueprint.DESCRIPTION_TAG)) {
-				String description = jo.getString(Blueprint.DESCRIPTION_TAG);
+			if (keys.contains(BaseBean.DESCRIPTION_TAG)) {
+				String description = jo.getString(BaseBean.DESCRIPTION_TAG);
 				if (!description.equals(bp.getDescription())) {
 					bp.setDescription(description);
 					bp.updateBlueprint();

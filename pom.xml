@@ -81,7 +81,7 @@
       <plugin>
         <groupId>kr.motd.maven</groupId>
         <artifactId>sphinx-maven-plugin</artifactId>
-        <version>2.4.0</version>
+        <version>2.6.0</version>
         <configuration>
           <sourceDirectory>${basedir}/src/site/docs</sourceDirectory>
           <outputDirectory>${basedir}/src/main/webapp/docs</outputDirectory>

@@ -16,7 +16,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="org.akraino.regional_controller.utils.BuildUtil" %>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>ARC - Akraino Regional Controller</title>
@@ -236,15 +236,13 @@ function airflow(){
 
 <div id="header">
 	<div id="banner">
-		<img src="https://wiki.akraino.org/download/thumbnails/327703/image2018-7-18_14-48-13.png"/>
+		<img alt="Akraino Edge Stack" src="https://wiki.akraino.org/download/thumbnails/327703/image2018-7-18_14-48-13.png"/>
 	</div>
 </div>
 
 <div id="content">
 <div class="inner">
-<table style="width: 100%">
-<tr>
-<td valign="top">
+<div style="width: 100%">
 	<h1>Regional Controller</h1>
 	<ul>
 		<li><a href="docs/">Documentation</a></li>
@@ -260,12 +258,10 @@ function airflow(){
 		<li>Version: <%= BuildUtil.getVersion() %></li>
 		<li>Build date: <%= BuildUtil.getBuildDate() %></li>
 	</ul>
-</td>
-</tr>
-</table>
 </div>
 </div>
-<div id="footer">Last update: 5/4/2019</div>
+</div>
+<div id="footer">Last update: 11/25/2019</div>
 
 </body>
 </html>

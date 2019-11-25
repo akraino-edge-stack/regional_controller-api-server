@@ -37,6 +37,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.akraino.regional_controller.beans.BaseBean;
 import org.akraino.regional_controller.beans.Role;
 import org.akraino.regional_controller.beans.User;
 import org.akraino.regional_controller.db.DB;
@@ -177,15 +178,15 @@ public class UserAPI extends APIBase {
 			// Can only change the description and roles of the User
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
-			if (keys.contains(User.UUID_TAG)) {
+			if (keys.contains(BaseBean.UUID_TAG)) {
 				throw new ForbiddenException("ARC-3017: Not allowed to modify the User's UUID.");
 			}
-			if (keys.contains(User.NAME_TAG)) {
+			if (keys.contains(BaseBean.NAME_TAG)) {
 				throw new ForbiddenException("ARC-3018: Not allowed to modify the User's name.");
 			}
 			boolean doupdate = false;
-			if (keys.contains(User.PASSWORD_TAG)) {
-				String pw = jo.getString(User.PASSWORD_TAG);
+			if (keys.contains(User.CREDENTIALS_TAG)) {
+				String pw = jo.getString(User.CREDENTIALS_TAG);
 				if (! pw.matches(User.HI_STRENGTH_RE)) {
 					String m = "Password is not strong enough; must match the regex: "+User.HI_STRENGTH_RE;
 					logger.warn(m);
@@ -194,8 +195,8 @@ public class UserAPI extends APIBase {
 				user.setPassword(pw);
 				doupdate = true;
 			}
-			if (keys.contains(User.DESCRIPTION_TAG)) {
-				String description = jo.getString(User.DESCRIPTION_TAG);
+			if (keys.contains(BaseBean.DESCRIPTION_TAG)) {
+				String description = jo.getString(BaseBean.DESCRIPTION_TAG);
 				if (!description.equals(user.getDescription())) {
 					user.setDescription(description);
 					doupdate = true;

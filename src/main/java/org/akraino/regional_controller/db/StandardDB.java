@@ -273,7 +273,7 @@ public class StandardDB implements DB {
 		} finally {
 			releaseConnection(conn);
 		}
-		List<Edgesite> list = new ArrayList<Edgesite>();
+		List<Edgesite> list = new ArrayList<>();
 		list.addAll(map.values());
 		return list;
 	}

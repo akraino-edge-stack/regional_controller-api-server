@@ -38,6 +38,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.akraino.regional_controller.beans.BaseBean;
 import org.akraino.regional_controller.beans.Hardware;
 import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.User;
@@ -181,26 +182,26 @@ public class HardwareAPI extends APIBase {
 			// Can only change the name, description & YAML of Hardware
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
-			if (keys.contains(Hardware.UUID_TAG)) {
+			if (keys.contains(BaseBean.UUID_TAG)) {
 				throw new ForbiddenException("ARC-3007: Not allowed to modify the Hardware profile's UUID.");
 			}
 			boolean doupdate = false;
-			if (keys.contains(Hardware.NAME_TAG)) {
-				String name = jo.getString(Hardware.NAME_TAG);
+			if (keys.contains(BaseBean.NAME_TAG)) {
+				String name = jo.getString(BaseBean.NAME_TAG);
 				if (!name.equals(hw.getName())) {
 					hw.setName(name);
 					doupdate = true;
 				}
 			}
-			if (keys.contains(Hardware.DESCRIPTION_TAG)) {
-				String description = jo.getString(Hardware.DESCRIPTION_TAG);
+			if (keys.contains(BaseBean.DESCRIPTION_TAG)) {
+				String description = jo.getString(BaseBean.DESCRIPTION_TAG);
 				if (!description.equals(hw.getDescription())) {
 					hw.setDescription(description);
 					doupdate = true;
 				}
 			}
-			if (keys.contains(Hardware.YAML_TAG)) {
-				JSONObject yaml = jo.getJSONObject(Hardware.YAML_TAG);
+			if (keys.contains(BaseBean.YAML_TAG)) {
+				JSONObject yaml = jo.getJSONObject(BaseBean.YAML_TAG);
 				// Make sure this profile is not in use
 				for (Node n : Node.getNodes()) {
 					if (n.getHardware().equals(uuid)) {

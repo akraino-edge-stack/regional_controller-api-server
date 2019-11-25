@@ -40,8 +40,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.akraino.regional_controller.beans.BaseBean;
 import org.akraino.regional_controller.beans.Edgesite;
-import org.akraino.regional_controller.beans.Node;
 import org.akraino.regional_controller.beans.Region;
 import org.akraino.regional_controller.beans.User;
 import org.akraino.regional_controller.db.DB;
@@ -205,19 +205,19 @@ public class RegionAPI extends APIBase {
 			// Can only change the name, description & YAML of the Node
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
-			if (keys.contains(Node.UUID_TAG)) {
+			if (keys.contains(BaseBean.UUID_TAG)) {
 				throw new ForbiddenException("ARC-3015: Not allowed to modify the Region's UUID.");
 			}
 			boolean doupdate = false;
-			if (keys.contains(Region.NAME_TAG)) {
-				String name = jo.getString(Region.NAME_TAG);
+			if (keys.contains(BaseBean.NAME_TAG)) {
+				String name = jo.getString(BaseBean.NAME_TAG);
 				if (!name.equals(r.getName())) {
 					r.setName(name);
 					doupdate = true;
 				}
 			}
-			if (keys.contains(Region.DESCRIPTION_TAG)) {
-				String description = jo.getString(Region.DESCRIPTION_TAG);
+			if (keys.contains(BaseBean.DESCRIPTION_TAG)) {
+				String description = jo.getString(BaseBean.DESCRIPTION_TAG);
 				if (!description.equals(r.getDescription())) {
 					r.setDescription(description);
 					doupdate = true;
@@ -275,7 +275,7 @@ public class RegionAPI extends APIBase {
 			throw new ClientErrorException("ARC-2005: This Region is still in use by another Region "+r1.getUuid(), HttpServletResponse.SC_CONFLICT);
 		}
 		List<Edgesite> list2 = r.getEdgesites();
-		if (list2 != null && list2.size() > 0) {
+		if (list2 != null && !list2.isEmpty()) {
 			Edgesite e1 = list2.get(0);
 			api_logger.info("{} user {}, realip {} => 409", method, u.getName(), realIp);
 			throw new ClientErrorException("ARC-2004: This Region is still in use by Edgesite "+e1.getUuid(), HttpServletResponse.SC_CONFLICT);

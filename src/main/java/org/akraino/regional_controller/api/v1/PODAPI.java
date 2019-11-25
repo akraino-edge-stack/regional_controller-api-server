@@ -38,6 +38,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.akraino.regional_controller.beans.BaseBean;
 import org.akraino.regional_controller.beans.Blueprint;
 import org.akraino.regional_controller.beans.Edgesite;
 import org.akraino.regional_controller.beans.POD;
@@ -117,10 +118,10 @@ public class PODAPI extends APIBase {
 			// 3. Verify that the Blueprint hardware profile allows deployment on this Edgesite
 			List<String> errors = bp.isCompatibleHardware(es);
 			if (! errors.isEmpty()) {
-				String msg = "The Edgesite "+edgesite+" is not hardware compatible with the Blueprint "+blueprint;
+				StringBuilder msg = new StringBuilder("The Edgesite "+edgesite+" is not hardware compatible with the Blueprint "+blueprint);
 				logger.warn(msg);
 				for (String s : errors) {
-					msg = msg + "\n" + s;
+					msg.append("\n").append(s);
 					logger.warn(s);
 				}
 				throw new BadRequestException("ARC-1030: "+msg);
@@ -129,10 +130,10 @@ public class PODAPI extends APIBase {
 			// 4. Verify that all data required from input schema in the Blueprint is in the uploaded file
 			errors = bp.isCompatibleYAML(Blueprint.WF_CREATE, jo.optJSONObject("yaml"));
 			if (! errors.isEmpty()) {
-				String msg = "The uploaded YAML is not compatible with the Blueprint "+blueprint;
+				StringBuilder msg = new StringBuilder("The uploaded YAML is not compatible with the Blueprint "+blueprint);
 				logger.warn(msg);
 				for (String s : errors) {
-					msg = msg + "\n" + s;
+					msg.append("\n").append(s);
 					logger.warn(s);
 				}
 				throw new BadRequestException("ARC-1030: "+msg);
@@ -156,7 +157,7 @@ public class PODAPI extends APIBase {
 				// 7. Create the POD in the DB.
 				POD p = POD.createPod(jo);
 				String uuid = p.getUuid();
-				JSONObject y = jo.optJSONObject(POD.YAML_TAG);
+				JSONObject y = jo.optJSONObject(BaseBean.YAML_TAG);
 				if (y == null) {
 					y = new JSONObject();
 				}
@@ -288,10 +289,10 @@ public class PODAPI extends APIBase {
 			// Can only change the description/blueprint of a POD
 			JSONObject jo = getContent(ctype, content);
 			Set<String> keys = jo.keySet();
-			if (keys.contains(POD.UUID_TAG)) {
+			if (keys.contains(BaseBean.UUID_TAG)) {
 				throw new ForbiddenException("ARC-3009: Not allowed to modify the POD's UUID.");
 			}
-			if (keys.contains(POD.NAME_TAG)) {
+			if (keys.contains(BaseBean.NAME_TAG)) {
 				throw new ForbiddenException("ARC-3013: Not allowed to modify the POD's name.");
 			}
 			if (keys.contains(POD.STATE_TAG)) {
@@ -314,11 +315,11 @@ public class PODAPI extends APIBase {
 			if (keys.contains(POD.EDGESITE_TAG)) {
 				throw new ForbiddenException("ARC-3012: Not allowed to modify the POD's edgesite.");
 			}
-			if (keys.contains(POD.YAML_TAG)) {
+			if (keys.contains(BaseBean.YAML_TAG)) {
 				throw new ForbiddenException("ARC-3010: Not allowed to modify the POD's YAML.");
 			}
-			if (keys.contains(POD.DESCRIPTION_TAG)) {
-				String description = jo.getString(POD.DESCRIPTION_TAG);
+			if (keys.contains(BaseBean.DESCRIPTION_TAG)) {
+				String description = jo.getString(BaseBean.DESCRIPTION_TAG);
 				if (!description.equals(p.getDescription())) {
 					p.setDescription(description);
 					p.updatePod();
@@ -404,10 +405,10 @@ public class PODAPI extends APIBase {
 		JSONObject jo = getContent(ctype, content);
 		List<String> errors = bp.isCompatibleYAML(wfname, jo);
 		if (! errors.isEmpty()) {
-			String msg = String.format("The uploaded YAML is not compatible with the Blueprint %s and workflow %s", p.getBlueprint(), wfname);
+			StringBuilder msg = new StringBuilder(String.format("The uploaded YAML is not compatible with the Blueprint %s and workflow %s", p.getBlueprint(), wfname));
 			logger.warn(msg);
 			for (String s : errors) {
-				msg = msg + "\n" + s;
+				msg.append("\n").append(s);
 				logger.warn(s);
 			}
 			throw new BadRequestException("ARC-1030: "+msg);
