@@ -227,7 +227,7 @@ public class POD extends BaseBean {
 				}
 				this.state = newstate;
 				if (newstate == State.ZOMBIE) {
-					// The Edgesite for this POD is being reused, so point to a non-existant ES
+					// The Edgesite for this POD is being reused, so point to a non-existent ES
 					this.edgesite = "00000000-0000-0000-0000-000000000000";	// TODO make sure this works
 				}
 				try {

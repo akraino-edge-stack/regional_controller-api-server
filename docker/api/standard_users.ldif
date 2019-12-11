@@ -6,38 +6,49 @@ dn: ou=groups,dc=akraino,dc=demo
 objectClass: organizationalUnit
 ou: groups
 
-dn: uid=38fdc60e-3dc2-11e9-9df9-53c00beebfb1,ou=people,dc=akraino,dc=demo
+dn: cn=readonly,ou=people,dc=akraino,dc=demo
 objectClass: person
 objectClass: inetOrgPerson
 uid: 38fdc60e-3dc2-11e9-9df9-53c00beebfb1
-cn: Readonly User
+cn: readonly
 sn: Readonly
 description: Readonly User
-userpassword: abc123
+userpassword: admin123
 ou: people
 initials: ro
 
-dn: uid=2d3a342e-6374-11e9-8b05-8333548995aa,ou=people,dc=akraino,dc=demo
+dn: cn=workflow,ou=people,dc=akraino,dc=demo
 objectClass: person
 objectClass: inetOrgPerson
 uid: 2d3a342e-6374-11e9-8b05-8333548995aa
-cn: Workflow User
+cn: workflow
 sn: Workflow
 description: Workflow User
-userpassword: abc123
+userpassword: admin123
 ou: people
 initials: wf
 
-dn: uid=a16d969e-4081-11e9-ade7-d3a10ca6285d,ou=people,dc=akraino,dc=demo
+dn: cn=noaccess,ou=people,dc=akraino,dc=demo
 objectClass: person
 objectClass: inetOrgPerson
 uid: a16d969e-4081-11e9-ade7-d3a10ca6285d
-cn: Noaccess User
+cn: noaccess
 sn: Noaccess
 description: Noaccess User
-userpassword: abc123
+userpassword: admin123
 ou: people
 initials: na
+
+dn: cn=admin,ou=people,dc=akraino,dc=demo
+objectClass: person
+objectClass: inetOrgPerson
+uid: 9ef95ad2-3150-11e9-98b6-0017f20dbff8
+cn: admin
+sn: Admin
+description: Full Access Admin
+userpassword: admin123
+ou: people
+initials: fa
 
 dn: cn=readonly,ou=groups,dc=akraino,dc=demo
 objectClass: groupOfNames

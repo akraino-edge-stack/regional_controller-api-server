@@ -1047,10 +1047,10 @@ public class StandardDB implements DB {
 				try (ResultSet rs = stmt.executeQuery()) {
 					if (rs.next() ) {
 						String description = rs.getString("description");
-						String uuid = rs.getString("uuid");
-						String name = rs.getString("name");
-						String password = rs.getString("pwhash");
-						User u = new User(uuid, name, password, (description == null) ? "" : description);
+						String uuid   = rs.getString("uuid");
+						String name   = rs.getString("name");
+						String pwhash = rs.getString("pwhash");
+						User u = new User(uuid, name, pwhash, (description == null) ? "" : description);
 						u.setRoles(getRolesForUser(uuid));
 						return u;
 					}
@@ -1064,7 +1064,7 @@ public class StandardDB implements DB {
 		return null;
 	}
 
-	private Set<Role> getRolesForUser(final String uuid) {
+	protected Set<Role> getRolesForUser(final String uuid) {
 		Set<Role> set = new TreeSet<>();
 		Connection conn = null;
 		try {

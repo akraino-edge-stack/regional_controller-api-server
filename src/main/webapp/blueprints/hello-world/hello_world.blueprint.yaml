@@ -13,32 +13,34 @@
 #      License for the specific language governing permissions and limitations
 #      under the License.
 #
-
+---
 blueprint: 1.0.0
 name: Hello World Blueprint
 version: 1.0.0
 uuid: 16f4caa8-abbd-11e9-9eb9-4b1f17da8d63
-description: This Blueprint demonstrates what is needed in a minimal ARC blueprint.
+description: This Blueprint demonstrates what is needed in a minimal ARC
+  blueprint.
 yaml:
   # Allow deployment to any hardware, max of 4 nodes
-  hardware_profile: { name: '.*', min: 1, max: 4 }
+  hardware_profile: {name: '.*', min: 1, max: 4}
   workflow:
     # The create workflow is run when the POD is initially created
     create:
       url: 'http://arc-api:8080/blueprints/hello-world/hw_create_wf.py'
       components:
-        - 'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png'
-        - 'https://dilbert.com/assets/dilbert_character_top-8c372237e95037529b2eb865829ee93214d7575811f4a197b2ebe43966cda5fa.png'
+        - 'https://www.nytimes.com/'
+        - 'https://assets.amuniversal.com/4b9def60e14e0137cc29005056a9545d'
       input_schema:
-        sleep: { type: integer }
-        returncode: { type: integer }
+        sleep: {type: integer}
+        returncode: {type: integer}
 
-    # This update workflow would be invoked via "PUT /api/v1/pod/<POD UUID>/update_type_1"
+    # This update workflow would be invoked via
+    # "PUT /api/v1/pod/<POD UUID>/update_type_1"
     update_type_1:
       url: 'http://arc-api:8080/blueprints/hello-world/hw_update_wf.py'
       input_schema:
-        sleep: { type: integer }
-        returncode: { type: integer }
+        sleep: {type: integer}
+        returncode: {type: integer}
 
     # The delete workflow is invoked when the POD is DELETE-ed
     delete:

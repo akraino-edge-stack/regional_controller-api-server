@@ -89,8 +89,10 @@ docker run --detach --name "${PREFIX}-ldap" \
 	--env LDAP_ADMIN_PASSWORD="$PW" \
 	--net=$NETWORK \
 	--volume $DROOT/ldap:/var/lib/ldap \
+	--volume $DROOT/init/ldap:/container/service/slapd/assets/config/bootstrap/ldif/custom \
 	$LDAP_IMAGE \
-	--loglevel debug
+	--loglevel debug \
+	--copy-service
 
 # Start DB - remove --publish option when not testing
 #  Make sure DB initialization .sql files are in $DROOT/init

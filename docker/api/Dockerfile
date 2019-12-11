@@ -27,10 +27,10 @@ RUN \
   apt-get install -yqq --no-install-recommends net-tools procps && \
   rm -fr webapps/ROOT webapps/docs webapps/examples webapps/host-manager webapps/manager && \
   useradd -c TOMCAT -s /bin/bash -d /usr/local/tomcat -u 1000 tomcat && \
-  mkdir /usr/local/tomcat/init
+  mkdir /usr/local/tomcat/init /usr/local/tomcat/init/ldap
 
-COPY 001_create_tables.sql 002_required_data.sql standard_users.ldif init/
-COPY akraino.demo.crt akraino.demo.key airflow.cfg nginx*.conf init/
+COPY 001_create_tables.sql 002_required_data.sql airflow.cfg akraino.demo.* nginx*.conf init/
+COPY standard_users.ldif init/ldap/
 COPY regional_controller-*.war webapps/ROOT.war
 RUN chown -R tomcat /usr/local/tomcat
 HEALTHCHECK --interval=60s CMD curl -f http://localhost:8080/ || exit 1

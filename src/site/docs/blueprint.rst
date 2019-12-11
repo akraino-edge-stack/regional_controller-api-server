@@ -24,7 +24,7 @@ of the blueprint schema used by this blueprint.
 The *input_schema* attributes, that describe the data that must be passed to the RC in
 order to perform an operation, are in a format similar to https://tools.ietf.org/html/draft-wright-json-schema-00
 The differences are to be described later (TODO).  Everything specified in the input_schema
-is assumed to be required. Optional items should not be listed ion the input_schema;
+is assumed to be required. Optional items should not be listed in the input_schema;
 it is the responsibility of the individual workflows to validate the format of
 optional data. The RC will validate that the YAML meets the schema when it is
 uploaded.  Fields and attributes that are not in the schema will be ignored, which
