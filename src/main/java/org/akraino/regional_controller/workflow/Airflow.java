@@ -19,13 +19,22 @@ package org.akraino.regional_controller.workflow;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 import org.akraino.regional_controller.beans.Blueprint;
@@ -50,6 +59,7 @@ public class Airflow implements WorkFlow {
 	public static final String DEFAULT_URL     = "http://arc-airflow-webserver:8080";
 	public static final String DEFAULT_ROOT    = "/workflow";
 	public static final String DEFAULT_DAGS    = "/dags";
+	public static final String AIRFLOW_LOGS    = "/usr/local/tomcat/logs/airflow";
 
 	private final Properties props;
 	private final Logger     logger;
@@ -159,6 +169,38 @@ public class Airflow implements WorkFlow {
 	@Override
 	public boolean isRunning() {
 		return (podwflow != null) && podwflow.isRunning();
+	}
+
+	@Override
+	public InputStream getLogfiles(POD pod, PODWorkflow pwf) {
+		// This function assumes that the Airflow logs are visible as a Docker mount
+		// under AIRFLOW_LOGS (/usr/local/tomcat/logs/airflow).
+
+		List<InputStream> streams = new ArrayList<>();
+		try {
+			Path logdir = Paths.get(String.format("%s/%s-%d-%s", AIRFLOW_LOGS, pwf.getName(), pwf.getIndex(), pod.getUuid()));
+			Files.walkFileTree(logdir, new SimpleFileVisitor<Path>() {
+
+				@Override
+				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws FileNotFoundException {
+					String filename = file.toString();
+					StringBuilder sb = new StringBuilder();
+					sb.append("************************************************************************************************************************\n");
+					sb.append("  Airflow Logfile: ").append(filename.substring(AIRFLOW_LOGS.length()+1)).append("\n");
+					sb.append("************************************************************************************************************************\n");
+					InputStream bis = new ByteArrayInputStream(sb.toString().getBytes());
+					streams.add(bis);
+
+					InputStream fis = new FileInputStream(filename);
+					streams.add(fis);
+					return FileVisitResult.CONTINUE;
+				}
+
+			});
+		} catch (IOException e) {
+			logger.warn("getLogfiles: "+e);
+		}
+		return new SequenceInputStream(Collections.enumeration(streams));
 	}
 
 	private boolean fetchFile(String url, String dir) {

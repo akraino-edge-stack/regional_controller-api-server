@@ -799,8 +799,10 @@ An example of YAML input:
 ===========  ======================================================================
 Return Code  Reason
 ===========  ======================================================================
-200          Successful execution. The Edge Site/Blueprint/JSON combination is valid.  Returned if the dryrun parameter is passed.
-201          Successful execution, the deployment has started.  A reference to the created POD is returned.
+200          Successful execution. The Edge Site/Blueprint/JSON combination is valid.
+             Returned if the *dryrun* parameter is passed.
+201          Successful execution, the deployment has started.  A reference to the
+             created POD is returned.
 400          The UUID provided is not a valid UUID.
 400          There is no Blueprint UUID in the JSON, or it does not refer to a valid Blueprint.
 400          There is no Edge Site UUID in the JSON, or it does not refer to a valid Edge Site.
@@ -852,7 +854,8 @@ GET /api/v1/pod/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Returns the details about a specific POD identified by ``UUID``, including the current
-deployment and/or update status of the POD.
+deployment and/or update status of the POD, a list of events logged against the POD,
+and a list of the workflow instance URLs related to the POD.
 
 Example YAML output from the API:
 
@@ -865,11 +868,19 @@ Example YAML output from the API:
   edgesite: 2d35351a-3dcb-11e9-9535-e36fdca4d937
   state: WORKFLOW
   events:
-  - { time: "Apr 02, 2019 10:57:56 AM", level: info, message: POD created. }
-  - { time: "Apr 02, 2019 10:57:58 AM", level: info, message: Workflow fetched. }
-  - { time: "Apr 02, 2019 10:57:59 AM", level: info, message: Workflow initiated. }
-  - { time: "Apr 02, 2019 10:58:04 AM", level: info, message: Artifacts fetched. }
-  - { time: "Apr 02, 2019 10:58:32 AM", level: info, message: REDFISH started. }
+  - { time: '2019-04-02 10:57:56.0', level: INFO, message: POD created. }
+  - { time: '2019-04-02 10:57:58.0', level: INFO, message: Workflow fetched. }
+  - { time: '2019-04-02 10:57:59.0', level: INFO, message: Workflow initiated. }
+  - { time: '2019-04-02 10:58:04.0', level: INFO, message: Artifacts fetched. }
+  - { time: '2019-04-02 10:58:32.0', level: INFO, message: REDFISH started. }
+  workflow_instances: [
+    /api/v1/pod/b9eb21c8-556c-11e9-a199-affa3402765c/create_0,
+    /api/v1/pod/b9eb21c8-556c-11e9-a199-affa3402765c/update_0,
+    /api/v1/pod/b9eb21c8-556c-11e9-a199-affa3402765c/update_1,
+    /api/v1/pod/b9eb21c8-556c-11e9-a199-affa3402765c/update_2,
+    /api/v1/pod/b9eb21c8-556c-11e9-a199-affa3402765c/update2_0,
+    /api/v1/pod/b9eb21c8-556c-11e9-a199-affa3402765c/update_3]
+  yaml: {}
 
 ===========  ======================================================================
 Return Code  Reason
@@ -879,16 +890,68 @@ Return Code  Reason
 403          User does not have RBAC rights to the content.
 ===========  ======================================================================
 
-PUT /api/v1/pod/``{uuid}``
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+GET /api/v1/pod/``{uuid}``/``{workflow_instance}``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Update the POD identified by ``uuid``. You may only change the description of a POD
-using this method; all other fields are considered "read-only."  In addition, this method
-does not run a workflow.
+Returns the details about a specific workflow instance for the POD identified by ``UUID``.
+The *workflow_instance* name is a combination of the workflow name and an index
+number, starting at 0, which is assigned by the API in order to keep multiple
+instances of the same workflow distinct. For example, if a blueprint contains an
+*update* workflow that is run three times, the three instances will have
+*workflow_instance* names of *update_0*, *update_1*, and *update_2*.
+
+Information returned includes the start and end times of the workflow, the workflow
+name and index number, and the YAML supplied to the API when the workflow was created.
+
+Example YAML output from the API:
+
+.. code-block:: yaml
+
+  name: create
+  index: 0
+  endtime: '2019-12-30 19:40:25.0'
+  starttime: '2019-12-30 19:40:25.0'
+  uuid: 6b0ff78c-700c-4b02-a338-3507705fd613
+  yaml: {sleep: 1, returncode: 0}
 
 ===========  ======================================================================
 Return Code  Reason
 ===========  ======================================================================
+200          Successful execution.
+401          Invalid session or session token.
+403          User does not have RBAC rights to the content.
+404          The UUID provided does not refer to a POD, or the workflow instance name is invalid.
+===========  ======================================================================
+
+GET /api/v1/pod/``{uuid}``/``{workflow_instance}``/logs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Returns the logs from the workflow engine related to a specific workflow instance.
+Note that the workflow engine may not support retrieval of logfiles, in which case
+this API may not return useful information.  Also, if the workflow is still running,
+the logs may be incomplete.  The content type returned is always ``text/plain``.
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+200          Successful execution.
+204          If no logfile is available.
+401          Invalid session or session token.
+403          User does not have RBAC rights to the content.
+404          The UUID provided does not refer to a POD, or the workflow instance name is invalid.
+===========  ======================================================================
+
+PUT /api/v1/pod/``{uuid}``
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Update the POD identified by ``uuid``. You may only change the description of a POD
+using this method; all other fields are considered "read-only."  In addition, this
+method does not run a workflow.
+
+===========  ======================================================================
+Return Code  Reason
+===========  ======================================================================
+200          Successful execution.
 400          The UUID provided is not a valid UUID.
 401          Invalid session or session token.
 403          User does not have RBAC rights to modify the POD.
@@ -909,6 +972,10 @@ starting the associated workflow.
 ===========  ======================================================================
 Return Code  Reason
 ===========  ======================================================================
+200          Successful execution. The URL and JSON combination is valid.
+             Returned if the *dryrun* parameter is passed.
+201          Successful execution, the workflow has started.  The URL of the
+             created workflow is returned.
 400          The UUID provided is not a valid UUID.
 401          Invalid session or session token.
 403          User does not have RBAC rights to modify the POD.
@@ -1201,11 +1268,3 @@ Return Code  Reason
 401          Invalid session or session token.
 403          User does not have RBAC rights to the content.
 ===========  ======================================================================
-
-.. _addon-api:
-
-Add-on API
-----------
-.. warning::
-
-  This API is to be provided later.
