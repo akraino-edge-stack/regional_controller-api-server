@@ -90,6 +90,13 @@ The RC Workflow Execution Environment
 
    workflow
 
+Changelog
+---------
+.. toctree::
+  :maxdepth: 1
+
+  changelog
+
 Indices and tables
 ==================
 

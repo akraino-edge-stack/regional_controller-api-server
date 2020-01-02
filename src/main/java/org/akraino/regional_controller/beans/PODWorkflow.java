@@ -24,6 +24,7 @@ import javax.ws.rs.WebApplicationException;
 import org.akraino.regional_controller.db.DB;
 import org.akraino.regional_controller.db.DBFactory;
 import org.akraino.regional_controller.utils.JSONtoYAML;
+import org.akraino.regional_controller.utils.YAMLtoJSON;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
@@ -74,6 +75,10 @@ public class PODWorkflow extends BaseBean {
 		this.endtime = null;
 	}
 
+	public String getInstanceName() {
+		return getName() + "_" + getIndex();
+	}
+
 	@Override
 	public void setName(String name) {
 		throw new IllegalArgumentException("ARC-4011: Cannot change the name of a PODWorkflow.");
@@ -112,10 +117,12 @@ public class PODWorkflow extends BaseBean {
 		JSONObject jo = super.toJSON();
 		jo.remove(DESCRIPTION_TAG);
 		jo.put("index", index);
-		jo.put("yaml", yaml);
 		jo.put("starttime", starttime.toString());
 		if (endtime != null) {
 			jo.put("endtime", endtime.toString());
+		}
+		if (yaml != null && !"".equals(yaml)) {
+			jo.put(YAML_TAG, new YAMLtoJSON(yaml).toJSON());
 		}
 		return jo;
 	}

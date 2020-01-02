@@ -29,7 +29,7 @@ export CERTDIR=${CERTDIR:-"${DROOT}/nginx/certs"}
 export  NGCONF=${NGCONF:-"nginx.conf"}
 
 # Container versions
-export  API_IMAGE=${API_IMAGE:-"nexus3.akraino.org:10003/akraino/arc_api:0.0.1-SNAPSHOT"}
+export  API_IMAGE=${API_IMAGE:-"nexus3.akraino.org:10003/akraino/arc_api:0.0.2-SNAPSHOT"}
 export   AF_IMAGE=${AF_IMAGE:-"nexus3.akraino.org:10003/akraino/airflow:0.0.1-SNAPSHOT"}
 export   DB_IMAGE=${DB_IMAGE:-"mariadb:10.4"}
 export LDAP_IMAGE=${LDAP_IMAGE:-"osixia/openldap:1.2.4"}
@@ -54,7 +54,7 @@ fi
 [ ! -d "$DROOT/db"    ]    && mkdir -p "$DROOT/db"
 [ ! -d "$DROOT/init"  ]    && mkdir -p "$DROOT/init"
 [ ! -d "$DROOT/ldap"  ]    && mkdir -p "$DROOT/ldap"
-[ ! -d "$DROOT/logs"  ]    && mkdir -p "$DROOT/logs"
+[ ! -d "$DROOT/logs"  ]    && mkdir -p "$DROOT/logs" "$DROOT/logs/airflow"
 [ ! -d "$DROOT/nginx" ]    && mkdir -p "$DROOT/nginx/certs"
 [ ! -d "$DROOT/workflow" ] && mkdir -p "$DROOT/workflow"
 
@@ -186,6 +186,7 @@ docker run --detach --name "${PREFIX}-airflow-scheduler" \
 
 docker run --detach --name "${PREFIX}-airflow-worker" \
 	$COMMON \
+	--volume ${DROOT}/logs/airflow:/usr/local/airflow/logs \
 	$AF_IMAGE worker
 
 echo "ARC started."

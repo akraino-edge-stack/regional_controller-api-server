@@ -16,6 +16,9 @@
 
 package org.akraino.regional_controller.api.v1;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -35,8 +38,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 
 import org.akraino.regional_controller.beans.BaseBean;
 import org.akraino.regional_controller.beans.Blueprint;
@@ -45,7 +50,11 @@ import org.akraino.regional_controller.beans.POD;
 import org.akraino.regional_controller.beans.PODEvent;
 import org.akraino.regional_controller.beans.PODWorkflow;
 import org.akraino.regional_controller.beans.User;
+import org.akraino.regional_controller.db.DB;
+import org.akraino.regional_controller.db.DBFactory;
 import org.akraino.regional_controller.utils.JSONtoYAML;
+import org.akraino.regional_controller.workflow.WorkFlow;
+import org.akraino.regional_controller.workflow.WorkFlowFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -257,12 +266,131 @@ public class PODAPI extends APIBase {
 		}
 		JSONObject jo = p.toJSON();
 		jo.put("url", "/api/v1/pod/" + jo.get("uuid"));
+
+		// Add list of POD events
 		JSONArray ja = new JSONArray();
 		for (PODEvent pe : p.getPodEvents()) {
 			ja.put(pe.toJSON());
 		}
 		jo.put("events", ja);
+
+		// Add list of POD workflow instances
+		JSONArray j2 = new JSONArray();
+		DB db = DBFactory.getDB();
+		for (PODWorkflow pwf : db.getPODWorkflows(uuid)) {
+			j2.put(String.format("/api/v1/pod/%s/%s_%d", uuid, pwf.getName(), pwf.getIndex()));
+		}
+		jo.put("workflow_instances", j2);
 		return jo;
+	}
+
+	@GET
+	@Path("/{uuid}/{wfinstance}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public String getPODWFDetailsJSON(
+		@HeaderParam(SESSION_TOKEN_HDR) String token,
+		@HeaderParam(REAL_IP_HDR) String realIp,
+		@PathParam("uuid") String uuid,
+		@PathParam("wfinstance") String wfinstance)
+	{
+		JSONObject jo = getPODWFDetailsCommon(token, realIp, uuid, wfinstance);
+		return jo.toString();
+	}
+
+	@GET
+	@Path("/{uuid}/{wfinstance}")
+	@Produces(APPLICATION_YAML)
+	public String getPODWFDetailsYAML(
+		@HeaderParam(SESSION_TOKEN_HDR) String token,
+		@HeaderParam(REAL_IP_HDR) String realIp,
+		@PathParam("uuid") String uuid,
+		@PathParam("wfinstance") String wfinstance)
+	{
+		JSONObject jo = getPODWFDetailsCommon(token, realIp, uuid, wfinstance);
+		return new JSONtoYAML(jo).toString();
+	}
+
+	private JSONObject getPODWFDetailsCommon(String token, String realIp, String uuid, String wfinstance) {
+		String method = "GET /api/v1/pod/"+uuid+"/"+wfinstance;
+		User u = checkToken(token, method, realIp);
+		checkRBAC(u, POD_READ_RBAC, method, realIp);
+
+		if (uuid == null || "".equals(uuid)) {
+			throw new BadRequestException("ARC-1028: bad UUID");
+		}
+		PODWorkflow pwf = getPODWorkflow(uuid, wfinstance);
+		if (pwf != null) {
+			return pwf.toJSON();
+		}
+		throw new NotFoundException("ARC-4001: object not found");
+	}
+
+	@GET
+	@Path("/{uuid}/{wfinstance}/logs")
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response getPODWorkflowLogs(
+		@HeaderParam(SESSION_TOKEN_HDR) String token,
+		@HeaderParam(REAL_IP_HDR) String realIp,
+		@PathParam("uuid") String uuid,
+		@PathParam("wfinstance") String wfinstance)
+	{
+		String method = "GET /api/v1/pod/"+uuid+"/"+wfinstance+"/logs";
+		User u = checkToken(token, method, realIp);
+		checkRBAC(u, POD_READ_RBAC, method, realIp);
+
+		if (uuid == null || "".equals(uuid)) {
+			throw new BadRequestException("ARC-1028: bad UUID");
+		}
+		POD pod = POD.getPodByUUID(uuid);
+		if (pod == null) {
+			throw new NotFoundException("ARC-4001: object not found");
+		}
+		PODWorkflow pwf = getPODWorkflow(uuid, wfinstance);
+		if (pwf == null) {
+			throw new NotFoundException("ARC-4001: object not found");
+		}
+		WorkFlow wf = WorkFlowFactory.getWorkFlow();
+		if (wf == null) {
+			throw new NotFoundException("ARC-4001: object not found");
+		}
+
+		// Return a stream connected to the logs
+		return Response.ok(new StreamingOutput() {
+
+			@Override
+			public void write(OutputStream output) throws IOException, WebApplicationException {
+				InputStream input = wf.getLogfiles(pod, pwf);
+				byte[] data = new byte[8192];
+				while (true) {
+					int n = input.read(data);
+					if (n < 0) {
+						input.close();
+						output.flush();
+						output.close();
+						return;
+					}
+					output.write(data, 0, n);
+				}
+			}
+
+		}).build();
+	}
+
+	private PODWorkflow getPODWorkflow(String uuid, String wfinstance) {
+		POD p = POD.getPodByUUID(uuid);
+		if (p != null) {
+			// Search for POD workflow instance with correct name
+			if (wfinstance.indexOf('_') < 0) {
+				wfinstance = wfinstance + "_0";
+			}
+			DB db = DBFactory.getDB();
+			for (PODWorkflow pwf : db.getPODWorkflows(uuid)) {
+				if (pwf.getInstanceName().equals(wfinstance)) {
+					return pwf;
+				}
+			}
+		}
+		return null;
 	}
 
 	@PUT
@@ -335,8 +463,7 @@ public class PODAPI extends APIBase {
 	@PUT
 	@Path("/{uuid}/{wfname}")
 	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(MediaType.APPLICATION_JSON)
-	public String putPODWorkflowJSON(
+	public Response putPODWorkflow(
 		@HeaderParam(SESSION_TOKEN_HDR) final String token,
 		@HeaderParam(REAL_IP_HDR)       final String realIp,
 		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
@@ -345,30 +472,6 @@ public class PODAPI extends APIBase {
 		@QueryParam("dryrun")           final String dryrun,
 		final String content
 	) {
-		JSONObject jo = putPODCommon(token, realIp, ctype, uuid, wfname, dryrun, content);
-		return jo.toString();
-	}
-
-	@PUT
-	@Path("/{uuid}/{wfname}")
-	@Consumes({APPLICATION_YAML, MediaType.APPLICATION_JSON})
-	@Produces(APPLICATION_YAML)
-	public String putPODWorkflowYAML(
-		@HeaderParam(SESSION_TOKEN_HDR) final String token,
-		@HeaderParam(REAL_IP_HDR)       final String realIp,
-		@HeaderParam(CONTENT_TYPE_HDR)  final String ctype,
-	  	@PathParam("uuid")              final String uuid,
-		@PathParam("wfname")            final String wfname,
-		@QueryParam("dryrun")           final String dryrun,
-		final String content
-	) {
-		JSONObject jo = putPODCommon(token, realIp, ctype, uuid, wfname, dryrun, content);
-		return new JSONtoYAML(jo).toString();
-	}
-
-	private JSONObject putPODCommon(String token, String realIp, String ctype, String uuid,
-			String wfname, String dryrun, String content)
-	{
 		String method = "PUT /api/v1/pod/"+uuid+"/"+wfname;
 		User u = checkToken(token, method, realIp);
 		checkRBAC(u, POD_UPDATE_RBAC, method, realIp);
@@ -417,7 +520,7 @@ public class PODAPI extends APIBase {
 		// 5. If a dry run, then we are done!
 		if (dryrun != null && dryrun.length() > 0) {
 			// Verify only -- do not actually run the workflow
-			return new JSONObject();
+			return Response.ok().build();
 		}
 
 		// 6. Write the user data to the DB
@@ -431,7 +534,13 @@ public class PODAPI extends APIBase {
 		}
 
 		// Success
-		return new JSONObject();
+		try {
+			return Response.created(new URI("/api/v1/pod/"+uuid+"/"+pwf.getInstanceName()))
+					.build();
+		} catch (URISyntaxException e) {
+			logger.warn(e.toString());
+			throw new BadRequestException("ARC-1030: "+e.toString());
+		}
 	}
 
 	@DELETE

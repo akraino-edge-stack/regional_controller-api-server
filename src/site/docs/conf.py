@@ -40,7 +40,7 @@ copyright = '2019, AT&T'
 author = 'R Eby'
 
 # The short X.Y version
-version = '1.0.0'
+version = '0.0.2-SNAPSHOT'
 # The full version, including alpha/beta/rc tags
 release = ''
 

@@ -16,6 +16,8 @@
 
 package org.akraino.regional_controller.workflow;
 
+import java.io.InputStream;
+
 import org.akraino.regional_controller.beans.POD;
 import org.akraino.regional_controller.beans.PODWorkflow;
 
@@ -27,4 +29,5 @@ public interface WorkFlow {
 	public void start();
 	public void cancel();
 	public boolean isRunning();
+	public InputStream getLogfiles(POD pod, PODWorkflow pwf);
 }

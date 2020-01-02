@@ -21,7 +21,7 @@
 # 2. add our files and remove demo webapps
 # 3. run as user tomcat (=1000)
 
-FROM tomcat:8.5.49
+FROM tomcat:8.5.50
 RUN \
   apt-get update -y && \
   apt-get install -yqq --no-install-recommends net-tools procps && \
