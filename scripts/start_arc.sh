@@ -58,7 +58,7 @@ fi
 [ ! -d "$DROOT/nginx" ]    && mkdir -p "$DROOT/nginx/certs"
 [ ! -d "$DROOT/workflow" ] && mkdir -p "$DROOT/workflow"
 
-chown 1000:1000 $DROOT/dags $DROOT/init $DROOT/logs $DROOT/workflow
+chown 1000:1000 $DROOT/dags $DROOT/init $DROOT/logs $DROOT/logs/airflow $DROOT/workflow
 chown 999:999   $DROOT/db $DROOT/ldap
 
 # See https://airflow.readthedocs.io/en/stable/integration.html for how to proxy airflow
