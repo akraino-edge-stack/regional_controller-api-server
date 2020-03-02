@@ -110,6 +110,25 @@ object that has a YAML column unless the -Y option is provided.
     ps: 2
     ram: 12x32GB
 
+A special usage of the *show* command is to show the events for a POD in a tabular form.
+This is done with the *--events* flag as follows:
+
+.. code-block:: bash
+
+  $ ./rc_cli pod show 6b0ff78c-700c-4b02-a338-3507705fd613 --events
+  Time                   Level   Message
+  ---------------------  ------  -------------------------------------------------------------------------------------------------------------------------------------------------
+  2019-12-30 19:37:44.0  INFO    Pod created.
+  2019-12-30 19:37:44.0  INFO    Starting workflow: create
+  2019-12-30 19:37:44.0  INFO    Workflow directory created: $DROOT/workflow/create-0-6b0ff78c-700c-4b02-a338-3507705fd613
+  2019-12-30 19:37:44.0  INFO    Workflow fetched: http://arc-api:8080/blueprints/hello-world/hw_create_wf.py
+  2019-12-30 19:37:46.0  INFO    Workflow component fetched: https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png
+  2019-12-30 19:37:46.0  INFO    Workflow component fetched: https://dilbert.com/assets/dilbert_character_top-8c372237e95037529b2eb865829ee93214d7575811f4a197b2ebe43966cda5fa.png
+  2019-12-30 19:37:46.0  INFO    Workflow template created.
+  2019-12-30 19:40:12.0  INFO    Starting create workflow for POD 6b0ff78c-700c-4b02-a338-3507705fd613
+  2019-12-30 19:40:25.0  INFO    Finishing create workflow for POD 6b0ff78c-700c-4b02-a338-3507705fd613
+  2019-12-30 19:40:25.0  STATUS  State changed to: ACTIVE
+
 RC_LOADDATA - Batch Load Data into the RC DB
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

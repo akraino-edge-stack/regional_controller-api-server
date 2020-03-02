@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2019, 2020 AT&T Intellectual Property. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -134,9 +134,22 @@ class Base(object):
             if self._rc._laststatus != 200:
                 print('rc_api: could not show the %s with UUID %s' % (self._type, uuid))
             else:
-                print('---')
-                js = json.loads(resp)
-                yaml.safe_dump(js, sys.stdout, default_flow_style=False)
+                if args.events:
+                    js = json.loads(resp)
+                    items = js['events']
+                    titles = ('Time', 'Level', 'Message')
+                    cols   = ('time', 'level', 'message')
+                    fmt = getFormat(items, cols)
+                    dashtuple = tuple( [DASHES for i in range(len(cols))] )
+                    print( fmt % titles )
+                    print( fmt % dashtuple )
+                    for r in items:
+                        valtuple = tuple( [r.get(k, '') for k in cols] )
+                        print( fmt % valtuple )
+                else:
+                    print('---')
+                    js = json.loads(resp)
+                    yaml.safe_dump(js, sys.stdout, default_flow_style=False)
 
 class Blueprint(Base):
     def __init__(self, rc, args):
@@ -248,6 +261,7 @@ def main():
     cmd4.add_argument('uuids', help='List of object UUIDs to update', metavar='uuid', nargs='+')
 
     cmd5 = sp.add_parser('show', help='show all details of one or more objects by UUID')
+    cmd5.add_argument('--events', help='display POD events in tabular form', action='store_const', dest='events', const=True, default=False)
     cmd5.add_argument('uuids', help='List of object UUIDs to show', metavar='uuid', nargs='+')
 
     cmd6 = sp.add_parser('update', help='update a POD by running a workflow')
