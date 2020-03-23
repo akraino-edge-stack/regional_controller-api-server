@@ -1,5 +1,5 @@
 <!--
- Copyright (c) 2019 AT&T Intellectual Property. All rights reserved.
+ Copyright (c) 2019, 2020 AT&T Intellectual Property. All rights reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -247,9 +247,14 @@ function airflow(){
 	<ul>
 		<li><a href="docs/">Documentation</a></li>
 		<li><a onclick="airflow();">AirFlow Console</a></li>
-		<li>Sample Blueprints
+		<li>Sample Blueprints:
 			<ul>
 			<li><a href="blueprints/hello-world/">Hello World Blueprint</a></li>
+			</ul>
+		</li>
+		<li>Schemas:
+			<ul>
+			<li><a href="schemas/blueprint_schema-1.0.0.json">Blueprint Schema 1.0.0</a></li>
 			</ul>
 		</li>
 	</ul>
@@ -261,7 +266,6 @@ function airflow(){
 </div>
 </div>
 </div>
-<div id="footer">Last update: 11/25/2019</div>
-
+<div id="footer">Last update: 2/10/2020</div>
 </body>
 </html>

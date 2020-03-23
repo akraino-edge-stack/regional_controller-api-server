@@ -1,5 +1,5 @@
 ..
-      Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+      Copyright (c) 2019, 2020 AT&T Intellectual Property. All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License");
       you may not use this file except in compliance with the License.
@@ -944,9 +944,14 @@ Return Code  Reason
 PUT /api/v1/pod/``{uuid}``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Update the POD identified by ``uuid``. You may only change the description of a POD
-using this method; all other fields are considered "read-only."  In addition, this
-method does not run a workflow.
+Update the POD identified by ``uuid``. You may only change the description or the
+blueprint of a POD using this method; all other fields are considered "read-only."
+In addition, this method does not run a workflow.
+
+When changing the blueprint of a POD, you are only allowed to change the Blueprint
+to a child Blueprint of the one you are already using; e.g. a Blueprint derived
+from the one the POD is already using.  This is intended to allow PODs to be updated
+over time as newer versions of the Blueprints become available.
 
 ===========  ======================================================================
 Return Code  Reason

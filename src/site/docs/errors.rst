@@ -1,5 +1,5 @@
 ..
-      Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+      Copyright (c) 2019, 2020 AT&T Intellectual Property. All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License");
       you may not use this file except in compliance with the License.
@@ -203,6 +203,13 @@ ARC-1033
 
 When creating a Blueprint, the new Blueprint referenced a parent Blueprint that is not in
 the system.  Make sure all parent Blueprints are loaded into the system first.
+
+ARC-1034
+--------
+
+When creating a Blueprint the Blueprint YAML failed validation when compared against
+the Blueprint schema.  The version of the Blueprint schema used for validation
+was specified in the *blueprint* field of the Blueprint.
 
 ARC-2001
 --------

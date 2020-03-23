@@ -4,7 +4,7 @@
 
   <groupId>org.akraino</groupId>
   <artifactId>regional_controller</artifactId>
-  <version>0.0.2-SNAPSHOT</version>
+  <version>0.0.3-SNAPSHOT</version>
   <packaging>war</packaging>
   <name>regional_controller</name>
   <url>http://maven.apache.org</url>
@@ -202,6 +202,11 @@
       <artifactId>commons-io</artifactId>
       <version>2.6</version>
     </dependency>
+    <dependency>
+      <groupId>com.github.everit-org.json-schema</groupId>
+      <artifactId>org.everit.json.schema</artifactId>
+      <version>1.12.1</version>
+    </dependency>
 
     <!-- Test dependencies -->
     <dependency>
@@ -217,4 +222,10 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+  </repositories>
 </project>

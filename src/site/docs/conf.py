@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 #
-# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+# Copyright (c) 2019, 2020 AT&T Intellectual Property. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,11 +36,11 @@
 # -- Project information -----------------------------------------------------
 
 project = 'Akraino Regional Controller'
-copyright = '2019, AT&T'
+copyright = '2019, 2020, AT&T'
 author = 'R Eby'
 
 # The short X.Y version
-version = '0.0.2-SNAPSHOT'
+version = '0.0.3-SNAPSHOT'
 # The full version, including alpha/beta/rc tags
 release = ''
 

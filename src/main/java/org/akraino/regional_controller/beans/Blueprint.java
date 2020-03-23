@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 AT&T Intellectual Property. All rights reserved.
+ * Copyright (c) 2019, 2020 AT&T Intellectual Property. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package org.akraino.regional_controller.beans;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,8 +26,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.InternalServerErrorException;
@@ -39,9 +39,14 @@ import org.akraino.regional_controller.utils.JSONtoYAML;
 import org.akraino.regional_controller.utils.YAMLtoJSON;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.everit.json.schema.Schema;
+import org.everit.json.schema.ValidationException;
+import org.everit.json.schema.Validator;
+import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 public class Blueprint extends BaseBean {
 	// Some standard workflow names
@@ -52,9 +57,10 @@ public class Blueprint extends BaseBean {
 	public static final String PARENT_TAG = "parent";
 	public static final String HARDWARE_STANZA = "hardware_profile";
 
-	private static final Set<String> schema_set = new TreeSet<>();
+	private static final Map<String, String> schema_map = new HashMap<>();
 	static {
-		schema_set.add("1.0.0");	// currently only handle version 1.0.0 of the blueprint schema
+		// Currently only handle version 1.0.0 of the Blueprint schema
+		schema_map.put("1.0.0", "blueprint_schema-1.0.0.json");
 	}
 
 	public static String createBlueprint(JSONObject json) throws WebApplicationException {
@@ -64,7 +70,7 @@ public class Blueprint extends BaseBean {
 			logger.warn("Missing schema version");
 			throw new BadRequestException("ARC-1016: Missing schema version");
 		}
-		if (!schema_set.contains(schema)) {
+		if (!schema_map.keySet().contains(schema)) {
 			logger.warn("The schema version "+schema+" is not recognized by this software.");
 			throw new BadRequestException("ARC-1024: The schema version "+schema+" is not recognized by this software.");
 		}
@@ -93,6 +99,39 @@ public class Blueprint extends BaseBean {
 			if (getBlueprintByUUID(p) == null) {
 				throw new BadRequestException("ARC-1033: No parent blueprint exists with UUID "+p);
 			}
+		}
+
+		// Compare with appropriate JSON schema to validate the rest of the blueprint
+		try {
+			String schemafile = schema_map.get(schema);
+			Object dummyobject = new Blueprint("", "", "", "", "");
+			try (InputStream inputStream = dummyobject.getClass().getClassLoader().getResourceAsStream(schemafile)) {
+				if (inputStream == null) {
+					logger.warn("The schema version "+schema+" is not recognized by this software.");
+					throw new BadRequestException("ARC-1024: The schema version "+schema+" is not recognized by this software.");
+				}
+				JSONObject rawSchema = new JSONObject(new JSONTokener(inputStream));
+				Schema schema2 = SchemaLoader.load(rawSchema);
+				// throws a ValidationException if this object is invalid
+				Validator validator = Validator.builder().build();
+				validator.performValidation(schema2, json);
+			}
+		} catch (IOException ex) {
+			// ignore
+		} catch (ValidationException ex) {
+			logger.warn("Blueprint fails validation.");
+			final StringBuilder sb = new StringBuilder();
+			ex
+				.getCausingExceptions()
+				.stream()
+				.map(ValidationException::getMessage)
+				.forEach(new Consumer<String>() {
+					@Override
+					public void accept(String t) {
+						sb.append("| ").append(t);
+					}
+				});
+			throw new BadRequestException("ARC-1034: Blueprint fails validation."+sb);
 		}
 
 		String uuid = json.optString(UUID_TAG);
@@ -419,22 +458,48 @@ public class Blueprint extends BaseBean {
 										}
 										break;
 									case "array":
-										errors.add("Arrays of arrays not allowed!");
+										errors.add("Arrays of arrays not allowed for key: "+prefix+key);
 										break;
 									case "string":
 									case "ipaddress":
+									case "ipv4":
+									case "ipv6":
 									case "cidr":
+									case "cidrv4":
+									case "cidrv6":
 										try {
 											String v = a.getString(i);
-											if (type2.contentEquals("ipaddress")) {
+											switch (type2) {
+											case "ipaddress":
 												if (!isValidIPAddress(v)) {
 													errors.add("The value \""+v+"\" for key "+fullkey+" is not a valid IP address.");
 												}
-											}
-											if (type2.contentEquals("cidr")) {
+												break;
+											case "ipv4":
+												if (!isValidIPV4Address(v)) {
+													errors.add("The value \""+v+"\" for key "+fullkey+" is not a valid IPV4 address.");
+												}
+												break;
+											case "ipv6":
+												if (!isValidIPV6Address(v)) {
+													errors.add("The value \""+v+"\" for key "+fullkey+" is not a valid IPV6 address.");
+												}
+												break;
+											case "cidr":
 												if (!isValidCIDR(v)) {
 													errors.add("The value \""+v+"\" for key "+fullkey+" is not a valid CIDR.");
 												}
+												break;
+											case "cidrv4":
+												if (!isValidV4CIDR(v)) {
+													errors.add("The value \""+v+"\" for key "+fullkey+" is not a valid IPV4 CIDR.");
+												}
+												break;
+											case "cidrv6":
+												if (!isValidV6CIDR(v)) {
+													errors.add("The value \""+v+"\" for key "+fullkey+" is not a valid IPV6 CIDR.");
+												}
+												break;
 											}
 										} catch (JSONException x) {
 											errors.add("Missing required value of type "+type2+": "+fullkey);
@@ -458,30 +523,28 @@ public class Blueprint extends BaseBean {
 					}
 					break;
 				case "string":
+					validateString(input, prefix, key, errors);
+					break;
 				case "ipaddress":
+					validateIPaddress(input, prefix, key, errors);
+					break;
+				case "ipv4":
+					validateIPv4address(input, prefix, key, errors);
+					break;
+				case "ipv6":
+					validateIPv6address(input, prefix, key, errors);
+					break;
 				case "cidr":
-					try {
-						String v = input.getString(key);
-						if (type.contentEquals("ipaddress")) {
-							if (!isValidIPAddress(v)) {
-								errors.add("The value \""+v+"\" for key "+prefix+key+" is not a valid IP address.");
-							}
-						}
-						if (type.contentEquals("cidr")) {
-							if (!isValidCIDR(v)) {
-								errors.add("The value \""+v+"\" for key "+prefix+key+" is not a valid CIDR.");
-							}
-						}
-					} catch (JSONException x) {
-						errors.add("Missing required value of type "+type+": "+prefix+key);
-					}
+					validateCIDR(input, prefix, key, errors);
+					break;
+				case "cidrv4":
+					validateV4CIDR(input, prefix, key, errors);
+					break;
+				case "cidrv6":
+					validateV6CIDR(input, prefix, key, errors);
 					break;
 				case "integer":
-					try {
-						input.getInt(key);
-					} catch (JSONException x) {
-						errors.add("Missing or invalid required value of type integer: "+prefix+key);
-					}
+					validateInteger(input, prefix, key, errors);
 					break;
 				default:
 					errors.add("Unknown schema type : "+type);
@@ -490,28 +553,147 @@ public class Blueprint extends BaseBean {
 			}
 		}
 	}
-	private boolean isValidIPAddress(String ip) {
+	private void validateString(JSONObject input, String prefix, String key, List<String> errors) {
 		try {
-			InetAddress.getByName(ip);
-			return true;
-		} catch (UnknownHostException x) {
-			return false;
+			input.getString(key);
+		} catch (JSONException x) {
+			errors.add("Missing required value of type string: "+prefix+key);
 		}
 	}
-	private boolean isValidCIDR(String cidr) {
+	private void validateIPaddress(JSONObject input, String prefix, String key, List<String> errors) {
+		try {
+			String v = input.getString(key);
+			if (!isValidIPAddress(v)) {
+				errors.add("The value \""+v+"\" for key "+prefix+key+" is not a valid IP address.");
+			}
+		} catch (JSONException x) {
+			errors.add("Missing required value of type ipaddress: "+prefix+key);
+		}
+	}
+	private void validateIPv4address(JSONObject input, String prefix, String key, List<String> errors) {
+		try {
+			String v = input.getString(key);
+			if (!isValidIPV4Address(v)) {
+				errors.add("The value \""+v+"\" for key "+prefix+key+" is not a valid IPV4 address.");
+			}
+		} catch (JSONException x) {
+			errors.add("Missing required value of type ipv4: "+prefix+key);
+		}
+	}
+	private void validateIPv6address(JSONObject input, String prefix, String key, List<String> errors) {
+		try {
+			String v = input.getString(key);
+			if (!isValidIPV6Address(v)) {
+				errors.add("The value \""+v+"\" for key "+prefix+key+" is not a valid IPV6 address.");
+			}
+		} catch (JSONException x) {
+			errors.add("Missing required value of type ipv6: "+prefix+key);
+		}
+	}
+	private void validateCIDR(JSONObject input, String prefix, String key, List<String> errors) {
+		try {
+			String v = input.getString(key);
+			if (!isValidCIDR(v)) {
+				errors.add("The value \""+v+"\" for key "+prefix+key+" is not a valid CIDR.");
+			}
+		} catch (JSONException x) {
+			errors.add("Missing required value of type cidr: "+prefix+key);
+		}
+	}
+	private void validateV4CIDR(JSONObject input, String prefix, String key, List<String> errors) {
+		try {
+			String v = input.getString(key);
+			if (!isValidV4CIDR(v)) {
+				errors.add("The value \""+v+"\" for key "+prefix+key+" is not a valid IPV4 CIDR.");
+			}
+		} catch (JSONException x) {
+			errors.add("Missing required value of type cidrv4: "+prefix+key);
+		}
+	}
+	private void validateV6CIDR(JSONObject input, String prefix, String key, List<String> errors) {
+		try {
+			String v = input.getString(key);
+			if (!isValidV6CIDR(v)) {
+				errors.add("The value \""+v+"\" for key "+prefix+key+" is not a valid IPV6 CIDR.");
+			}
+		} catch (JSONException x) {
+			errors.add("Missing required value of type cidrv6: "+prefix+key);
+		}
+	}
+	private void validateInteger(JSONObject input, String prefix, String key, List<String> errors) {
+		try {
+			input.getInt(key);
+		} catch (JSONException x) {
+			errors.add("Missing or invalid required value of type integer: "+prefix+key);
+		}
+	}
+	private boolean isValidIPV4Address(final String ip) {
+		String[] octets = ip.split("\\.");
+		if (octets == null || octets.length != 4)
+			return false;
+		for (String octet : octets) {
+			int n = Integer.parseInt(octet);
+			if (n < 0 || n > 255)
+				return false;
+		}
+		return true;
+	}
+	private boolean isValidIPV6Address(final String ip) {
+		// Special check for loopback address
+		if (! ip.equals("::1")) {
+			String[] hextets = ip.split(":");
+			if (hextets == null || hextets.length > 8)
+				return false;
+			boolean expect_empty = hextets.length != 8;
+			for (String hextet : hextets) {
+				if (hextet.length() == 0) {
+					if (expect_empty) {
+						expect_empty = false;
+					} else {
+						return false;
+					}
+				} else {
+					if (!hextet.matches("[0-9a-fA-F]{1,4}")) {
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+	private boolean isValidIPAddress(final String ip) {
+		return isValidIPV4Address(ip) || isValidIPV6Address(ip);
+	}
+	private boolean isValidV4CIDR(final String cidr) {
 		String[] parts = cidr.split("/");
 		if (parts.length == 2) {
 			try {
 				int n = Integer.parseInt(parts[1]);
 				if (n >= 0 && n <= 32) {
-					// should adjust later for IPv6
-					return isValidIPAddress(parts[0]);
+					return isValidIPV4Address(parts[0]);
 				}
 			} catch (NumberFormatException x) {
 				// fall thru
 			}
 		}
 		return false;
+	}
+	private boolean isValidV6CIDR(final String cidr) {
+		String[] parts = cidr.split("/");
+		if (parts.length == 2) {
+			try {
+				int n = Integer.parseInt(parts[1]);
+				if (n >= 0 && n <= 128) {
+					return isValidIPV6Address(parts[0]);
+				}
+			} catch (NumberFormatException x) {
+				// fall thru
+			}
+		}
+		return false;
+	}
+	private boolean isValidCIDR(final String cidr) {
+		return isValidV4CIDR(cidr) || isValidV6CIDR(cidr);
 	}
 
 	public JSONObject getObjectStanza(final String path) {

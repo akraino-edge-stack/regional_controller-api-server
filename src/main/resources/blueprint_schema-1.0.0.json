@@ -1,0 +1,203 @@
+{
+    "$id": "http://akraino.org/blueprint_schema-1.0.0.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Akraino Regional Controller Blueprint Schema",
+    "description": "This schema defines the fields/values for a Blueprint that will be accepted by the RC",
+    "version": "1.0.0",
+
+    "type": "object",
+    "properties": {
+        "blueprint": {
+            "type": "string",
+            "description": "The version of the Blueprint schema being used",
+            "pattern": "^1.0.0$"
+        },
+        "name": {
+            "type": "string",
+            "description": "The name of the Blueprint"
+        },
+        "description": {
+            "type": "string",
+            "description": "A description of the Blueprint (optional)"
+        },
+        "version": {
+            "$ref": "#/definitions/version",
+            "description": "The version of the Blueprint defined by this file"
+        },
+        "uuid": {
+            "$ref": "#/definitions/uuid",
+            "description": "The UUID to be used for this Blueprint within the RC (optional)"
+        },
+        "yaml": {
+            "$ref": "#/definitions/blueprint_yaml",
+            "description": "Blueprint specific details"
+        }
+    },
+    "required": ["blueprint", "name", "version", "yaml"],
+    "additionalProperties": false,
+
+    "definitions": {
+        "version": {
+            "type": "string",
+            "minLength": 5,
+            "pattern": "^[0-9]+.[0-9]+.[0-9]+$"
+        },
+        "uuid": {
+            "type": "string",
+            "minLength": 36,
+            "maxLength": 36,
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "blueprint_yaml": {
+            "type": "object",
+            "properties": {
+                "parent": {
+                    "$ref": "#/definitions/uuid",
+                    "description": "The UUID of the parent Blueprint (optional)"
+                },
+                "hardware_profile": {
+                    "$ref": "#/definitions/hardware_profile",
+                    "description": "The Hardware profile required for this blueprint"
+                },
+                "workflow": {
+                    "$ref": "#/definitions/workflow_set",
+                    "description": "The set of workflows used by this blueprint"
+                }
+            },
+            "additionalProperties": false
+        },
+        "hardware_profile_rule": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "and": {
+                            "type": "array",
+                            "items": { "$ref": "#/definitions/hardware_profile_rule" }
+                        }
+                    },
+                    "required": ["and"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "or": {
+                            "type": "array",
+                            "items": { "$ref": "#/definitions/hardware_profile_rule" }
+                        }
+                    },
+                    "required": ["or"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "uuid": { "$ref": "#/definitions/uuid" },
+                        "min": { "type": "integer", "minimum": 0 },
+                        "max": { "type": "integer", "minimum": 0 }
+                    },
+                    "required": ["uuid"]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "min": { "type": "integer", "minimum": 0 },
+                        "max": { "type": "integer", "minimum": 0 }
+                    },
+                    "required": ["name"]
+                }
+            ]
+        },
+        "hardware_profile": {
+            "$ref": "#/definitions/hardware_profile_rule"
+        },
+        "workflow_set": {
+            "type": "object",
+            "propertyNames": {
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+            },
+            "patternProperties": {
+                "": { "$ref": "#/definitions/workflow" }
+            }
+        },
+        "input_schema_rule": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "pattern": "^object$"
+                        },
+                        "properties": {
+                            "$ref": "#/definitions/input_schema_plist"
+                        }
+                    },
+                    "required": ["type", "properties"],
+                    "additionalProperties": true
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "pattern": "^array$"
+                        },
+                        "items": {
+                            "$ref": "#/definitions/input_schema_rule"
+                        }
+                    },
+                    "required": ["type", "items"],
+                    "additionalProperties": true
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "pattern": "^string|integer|ipaddress|ipv4|ipv6|cidr|cidrv4|cidrv6$"
+                        }
+                    },
+                    "required": ["type"],
+                    "additionalProperties": true
+                }
+            ]
+        },
+        "input_schema_plist": {
+            "type": "object",
+            "propertyNames": {
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+            },
+            "patternProperties": {
+                ".*": { "$ref": "#/definitions/input_schema_rule" }
+            }
+        },
+        "workflow": {
+            "type": "object",
+            "description": "The encapsulation of one workflow within the Blueprint",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URI of a Python/Shell script that contains the workflow code",
+                    "format": "uri"
+                },
+                "components": {
+                    "type": "array",
+                    "description": "Items that the RC will pre-fetch when executing this workflow",
+                    "items": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                },
+                "input_schema": {
+                    "$ref": "#/definitions/input_schema_plist",
+                    "description": "The schema for the input YAML required for this workflow."
+                }
+            },
+            "required": ["url"],
+            "additionalProperties": false
+        }
+    }
+}
